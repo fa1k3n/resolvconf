@@ -2,18 +2,22 @@ package resolvconf
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 )
 
 func (this *Conf) Add(opts ...interface{}) error {
+	var err *multierror.Error
 	for _, o := range opts {
 		switch opt := o.(type) {
 		case Nameserver:
 			if len(this.Nameservers)+1 > 3 {
-				return fmt.Errorf("Too many nameserver configs, max is 3")
+				err = multierror.Append(err, fmt.Errorf("Too many nameserver configs, max is 3"))
+				break
 			}
 			// Search if this nameserver is already added
 			if this.Find(o.(Nameserver)) != nil {
-				return fmt.Errorf("Nameserver %s already exists in conf", opt)
+				err = multierror.Append(err, fmt.Errorf("Nameserver %s already exists in conf", opt))
+				break
 			}
 
 			this.Nameservers = append(this.Nameservers, opt)
@@ -24,29 +28,36 @@ func (this *Conf) Add(opts ...interface{}) error {
 		case SearchDomain:
 			// Search if this search domain is already added
 			if this.Find(o) != nil {
-				return fmt.Errorf("Search domain %s already exists in conf", opt)
+				err = multierror.Append(err, fmt.Errorf("Search domain %s already exists in conf", opt))
+				break
 			}
 			this.Search.Domains = append(this.Search.Domains, opt)
 		case Sortlist:
 			this.Sortlist = o.(Sortlist)
 		case Sortlistpair:
 			if i := this.Find(o); i != nil {
-				return fmt.Errorf("Searchlist pair %s already exists in conf", opt)
+				err = multierror.Append(err, fmt.Errorf("Searchlist pair %s already exists in conf", opt))
+				break
 			}
 			this.Sortlist.Pairs = append(this.Sortlist.Pairs, opt)
 		case []Option:
 			this.Options = o.([]Option)
 		case Option:
+			if _, e := parseOption(o.(Option).String()); e != nil {
+				err =  multierror.Append(err, fmt.Errorf("Unknown option %s", o.(Option)))
+				break
+			}
 			if o := this.Find(opt); o != nil {
-				return fmt.Errorf("Option %s is already present", o.(Option).Type)
+				err = multierror.Append(err, fmt.Errorf("Option %s is already present", o.(Option).Type))
+				break
 			}
 			this.Options = append(this.Options, opt)
 
 		default:
-			return fmt.Errorf("Unknown option type %v", opt)
+			err = multierror.Append(err, fmt.Errorf("Unknown option type %v", opt))
 		}
 	}
-	return nil
+	return err.ErrorOrNil()
 }
 
 func (this *Conf) Remove(o interface{}) error {

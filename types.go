@@ -61,37 +61,37 @@ func New() *Conf {
 	return new(Conf)
 }
 
-func NewNameserver(IP net.IP) (Nameserver, error) {
-	return Nameserver{IP}, nil
+func NewNameserver(IP net.IP) Nameserver {
+	return Nameserver{IP}
 }
 
-func NewDomain(dom string) (Domain, error) {
-	return Domain{dom}, nil
+func NewDomain(dom string) Domain {
+	return Domain{dom}
 }
 
-func NewSearchDomain(dom string) (SearchDomain, error) {
-	return SearchDomain{dom}, nil
+func NewSearchDomain(dom string) SearchDomain {
+	return SearchDomain{dom}
 }
 
 // @TODO: Make variadic and netmask optional
-func NewSortlistPair(addr, mask net.IP) (Sortlistpair, error) {
-	return Sortlistpair{addr, mask}, nil
+func NewSortlistPair(addr, mask net.IP) Sortlistpair {
+	return Sortlistpair{addr, mask}
 }
 
-func NewOption(t string, val ...int) (Option, error) {
+func NewOption(t string, val ...int) Option {
 	// Check va
 	opt := Option{t, -1}
 	if len(val) > 1 {
-		return Option{"", -1}, fmt.Errorf("Only a single value is allowed, found %v", val)
+		return Option{"", -1}
 	} else if len(val) == 1 {
 		if val[0] < 0 {
-			return Option{"", -1}, fmt.Errorf("Only positive values are allowed, found %d", val[0])
+			return Option{"", -1}
 		}
 		opt.Value = val[0]
 	}
 	if _, err := parseOption(opt.String()); err != nil {
-		return Option{"", -1}, err
+		return Option{"", -1}
 	}
 
-	return opt, nil
+	return opt
 }
