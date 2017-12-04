@@ -1,0 +1,5 @@
+nameserver 202.54.1.11
+
+search cyberciti.biz
+
+options debug ndots:3
