@@ -21,10 +21,10 @@ func main() {
 	conf := resolvconf.New()
 	
 	// Add some options
-	conf.Add(resolvconf.NewOption("debug"), resolvconf.NewOption("ndots", 3))
+	conf.Add(resolvconf.Option("debug"), resolvconf.Option("ndots", 3))
 
 	// Add a nameservers
-	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
 
 	// Dump to stdout
 	conf.Write(os.Stdout)

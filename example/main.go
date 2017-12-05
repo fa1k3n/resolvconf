@@ -21,8 +21,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	r.Add(resolvconf.NewOption("debug"), resolvconf.NewOption("ndots", 3))
-	r.Remove(resolvconf.NewNameserver(net.ParseIP("202.54.1.10")))
+	r.Add(resolvconf.Option("debug"), resolvconf.Option("ndots", 3))
+	r.Remove(resolvconf.Nameserver(net.ParseIP("202.54.1.10")))
 
 	r.Write(os.Stdout)
 
