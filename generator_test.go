@@ -16,7 +16,7 @@ func GetConf(conf *resolvconf.Conf) (string, error) {
 
 func TestNameserverGeneration(t *testing.T) {
 	conf := resolvconf.New()
-	ns := resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))
+	ns := resolvconf.Nameserver(net.ParseIP("8.8.8.8"))
 
 	// Test write a nameserver
 	conf.Add(ns)
@@ -31,7 +31,7 @@ func TestNameserverGeneration(t *testing.T) {
 	assert.Equal(t, "", str)
 
 	// Add two nameservers
-	ns2 := resolvconf.NewNameserver(net.ParseIP("8.8.8.9"))
+	ns2 := resolvconf.Nameserver(net.ParseIP("8.8.8.9"))
 	conf.Add(ns, ns2)
 	str, err = GetConf(conf)
 	assert.Nil(t, err)
@@ -41,7 +41,7 @@ func TestNameserverGeneration(t *testing.T) {
 
 func TestDomainGeneration(t *testing.T) {
 	conf := resolvconf.New()
-	dom := resolvconf.NewDomain("foo.com")
+	dom := resolvconf.Domain("foo.com")
 	conf.Add(dom)
 	str, err := GetConf(conf)
 	assert.Nil(t, err)
@@ -56,7 +56,7 @@ func TestDomainGeneration(t *testing.T) {
 
 func TestOptionsGeneration(t *testing.T) {
 	conf := resolvconf.New()
-	dbg := resolvconf.NewOption("debug")
+	dbg := resolvconf.Option("debug")
 	conf.Add(dbg)
 	str, err := GetConf(conf)
 	assert.Nil(t, err)
@@ -67,13 +67,13 @@ func TestOptionsGeneration(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "", str)
 
-	rotate := resolvconf.NewOption("rotate")
+	rotate := resolvconf.Option("rotate")
 	conf.Add(dbg, rotate)
 	str, err = GetConf(conf)
 	assert.Nil(t, err)
 	assert.Contains(t, str, "options debug rotate")
 
-	ndots := resolvconf.NewOption("ndots", 3)
+	ndots := resolvconf.Option("ndots", 3)
 	conf.Add(ndots)
 	conf.Remove(dbg)
 	str, err = GetConf(conf)
@@ -83,13 +83,13 @@ func TestOptionsGeneration(t *testing.T) {
 
 func TestSortlistGeneration(t *testing.T) {
 	conf := resolvconf.New()
-	addr1 := resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8"), net.ParseIP("255.255.255.0"))
+	addr1 := resolvconf.SortlistPair(net.ParseIP("8.8.8.8"), net.ParseIP("255.255.255.0"))
 	conf.Add(addr1)
 	str, err := GetConf(conf)
 	assert.Nil(t, err)
 	assert.Contains(t, str, "sortlist 8.8.8.8/255.255.255.0")
 
-	addr2 := resolvconf.NewSortlistPair(net.ParseIP("8.8.8.7"), net.IP{})
+	addr2 := resolvconf.SortlistPair(net.ParseIP("8.8.8.7"), net.IP{})
 	conf.Remove(addr1)
 	conf.Add(addr2)
 	str, err = GetConf(conf)
@@ -104,7 +104,7 @@ func TestSortlistGeneration(t *testing.T) {
 
 func TestSearchGeneration(t *testing.T) {
 	conf := resolvconf.New()
-	dom1 := resolvconf.NewSearchDomain("foo.bar")
+	dom1 := resolvconf.SearchDomain("foo.bar")
 	conf.Add(dom1)
 	str, err := GetConf(conf)
 	assert.Nil(t, err)

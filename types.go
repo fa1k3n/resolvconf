@@ -2,55 +2,58 @@ package resolvconf
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 )
 
 type Conf struct {
-	Nameservers []Nameserver
-	Domain      Domain
-	Search      Search
-	Sortlist    Sortlist
-	Options     []Option
+	Nameservers []nameserver
+	Domain      domain
+	Search      search
+	Sortlist    sortlist
+	Options     []option
+	logger      *log.Logger
 }
 
-type Nameserver struct {
+type nameserver struct {
 	IP net.IP
 }
 
-type Domain struct {
+type domain struct {
 	Name string
 }
 
-type Search struct {
-	Domains []SearchDomain
+type search struct {
+	Domains []searchDomain
 }
 
-type SearchDomain struct {
+type searchDomain struct {
 	Name string
 }
 
-type Sortlist struct {
-	Pairs []Sortlistpair
+type sortlist struct {
+	Pairs []sortlistpair
 }
 
-type Sortlistpair struct {
+type sortlistpair struct {
 	Address net.IP
 	Netmask net.IP
 }
 
-func (s Sortlistpair) String() string {
+func (s sortlistpair) String() string {
 	if len(s.Netmask) > 0 {
 		return fmt.Sprintf("%s/%s", s.Address, s.Netmask)
 	}
 	return fmt.Sprintf("%s", s.Address)
 }
 
-type Option struct {
+type option struct {
 	Type  string
 	Value int
 }
 
-func (o Option) String() string {
+func (o option) String() string {
 	if o.Value == -1 {
 		return fmt.Sprintf("%s", o.Type)
 	}
@@ -58,43 +61,45 @@ func (o Option) String() string {
 }
 
 func New() *Conf {
-	return new(Conf)
+	c := new(Conf)
+	c.logger = log.New(ioutil.Discard, "[resolvconf] ", 0)
+	return c
 }
 
-func NewNameserver(IP net.IP) Nameserver {
-	return Nameserver{IP}
+func Nameserver(IP net.IP) nameserver {
+	return nameserver{IP}
 }
 
-func NewDomain(dom string) Domain {
-	return Domain{dom}
+func Domain(dom string) domain {
+	return domain{dom}
 }
 
-func NewSearchDomain(dom string) SearchDomain {
-	return SearchDomain{dom}
+func SearchDomain(dom string) searchDomain {
+	return searchDomain{dom}
 }
 
-func NewSortlistPair(addr net.IP, mask ...net.IP) Sortlistpair {
+func SortlistPair(addr net.IP, mask ...net.IP) sortlistpair {
 	if len(mask) > 1 {
-		return Sortlistpair{nil, nil}
+		return sortlistpair{nil, nil}
 	} else if len(mask) == 0 {
-		return Sortlistpair{addr, nil}
+		return sortlistpair{addr, nil}
 	}
-	return Sortlistpair{addr, mask[0]}
+	return sortlistpair{addr, mask[0]}
 }
 
-func NewOption(t string, val ...int) Option {
+func Option(t string, val ...int) option {
 	// Check va
-	opt := Option{t, -1}
+	opt := option{t, -1}
 	if len(val) > 1 {
-		return Option{"", -1}
+		return option{"", -1}
 	} else if len(val) == 1 {
 		if val[0] < 0 {
-			return Option{"", -1}
+			return option{"", -1}
 		}
 		opt.Value = val[0]
 	}
 	if _, err := parseOption(opt.String()); err != nil {
-		return Option{"", -1}
+		return option{"", -1}
 	}
 
 	return opt

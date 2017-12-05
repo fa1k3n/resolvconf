@@ -12,40 +12,38 @@ import (
 func TestReadNameserver(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("nameserver 8.8.8.8"))
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(conf.Nameservers))
-	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Nameservers[0].IP)
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("nameserver 8.8.8.9"))
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(conf.Nameservers))
-	assert.Equal(t, net.ParseIP("8.8.8.9"), conf.Nameservers[0].IP)
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.9"))))
 }
 
 func TestReadFaultyNameserver(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("nameserver 8.8.8"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
+	assert.Nil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8"))))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("nameserver 8.8.8.8.8"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
+	assert.Nil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8.8"))))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("nameserver www.golang.org"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
+	assert.Nil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("www.golang.org"))))
 }
 
 func TestReadUnknownConfOption(t *testing.T) {
-	conf, err := resolvconf.ReadConf(strings.NewReader("nameserv 8.8.8.9"))
+	_, err := resolvconf.ReadConf(strings.NewReader("nameserv 8.8.8.9"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
 }
 
 func TestReadSeveralNameservers(t *testing.T) {
 	conf_str := "nameserver 8.8.8.8\n" +
 		"nameserver 8.8.8.9\n"
 	conf, _ := resolvconf.ReadConf(strings.NewReader(conf_str))
-	assert.Equal(t, 2, len(conf.Nameservers))
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.9"))))
 }
 
 func TestMaxThreeNameservers(t *testing.T) {
@@ -55,7 +53,11 @@ func TestMaxThreeNameservers(t *testing.T) {
 		"nameserver 8.8.8.11\n"
 	conf, err := resolvconf.ReadConf(strings.NewReader(conf_str))
 	assert.NotNil(t, err)
-	assert.Equal(t, 3, len(conf.Nameservers))
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.9"))))
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.10"))))
+	// Should not be there
+	assert.Nil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.11"))))
 }
 
 func TestAddSameNameserverGivesError(t *testing.T) {
@@ -63,30 +65,19 @@ func TestAddSameNameserverGivesError(t *testing.T) {
 		"nameserver 8.8.8.8\n"
 	conf, err := resolvconf.ReadConf(strings.NewReader(conf_str))
 	assert.NotNil(t, err)
-	assert.Equal(t, 1, len(conf.Nameservers))
+	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
 }
 
 func TestCommentsAndBlankLinesAreSkipped(t *testing.T) {
-	conf, err := resolvconf.ReadConf(strings.NewReader("# This is a comment"))
+	_, err := resolvconf.ReadConf(strings.NewReader("# This is a comment"))
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
 
-	conf, err = resolvconf.ReadConf(strings.NewReader("#This is another comment"))
+	_, err = resolvconf.ReadConf(strings.NewReader("; This is a forth comment"))
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
-
-	conf, err = resolvconf.ReadConf(strings.NewReader("  #This is a third comment"))
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
-
-	conf, err = resolvconf.ReadConf(strings.NewReader("; This is a forth comment"))
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
 
 	// Empty line
-	conf, err = resolvconf.ReadConf(strings.NewReader("\n"))
+	_, err = resolvconf.ReadConf(strings.NewReader("\n"))
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Nameservers))
 }
 
 func TestReadDomain(t *testing.T) {
