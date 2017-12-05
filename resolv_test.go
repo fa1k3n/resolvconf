@@ -218,3 +218,30 @@ func TestAddBadOptionInList(t *testing.T) {
 	assert.Equal(t, "debug", conf.Options[0].Type)
 	assert.Equal(t, "8.8.8.8", conf.Nameservers[0].IP.String())
 }
+
+func TestRemoveMultipleItems(t *testing.T) {
+	conf := resolvconf.New()
+	err := conf.Add(resolvconf.NewOption("ndots", 4), resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(conf.Nameservers))
+	assert.Equal(t, 1, len(conf.Options))
+
+	err = conf.Remove(resolvconf.NewOption("ndots", 4), resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(conf.Nameservers))
+	assert.Equal(t, 0, len(conf.Options))
+}
+
+func TestVariadicStorlistPair(t *testing.T) {
+	conf := resolvconf.New()
+	err := conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
+	assert.Nil(t, err)
+	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist.Pairs[0].Address)
+	assert.Equal(t, net.ParseIP(""), conf.Sortlist.Pairs[0].Netmask)
+
+	conf = resolvconf.New()
+	err = conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8"), net.ParseIP("255.255.255.0")))
+	assert.Nil(t, err)
+	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist.Pairs[0].Address)
+	assert.Equal(t, net.ParseIP("255.255.255.0"), conf.Sortlist.Pairs[0].Netmask)
+}

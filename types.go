@@ -73,9 +73,13 @@ func NewSearchDomain(dom string) SearchDomain {
 	return SearchDomain{dom}
 }
 
-// @TODO: Make variadic and netmask optional
-func NewSortlistPair(addr, mask net.IP) Sortlistpair {
-	return Sortlistpair{addr, mask}
+func NewSortlistPair(addr net.IP, mask ...net.IP) Sortlistpair {
+	if len(mask) > 1 {
+		return Sortlistpair{nil, nil}
+	} else if len(mask) == 0 {
+		return Sortlistpair{addr, nil}
+	}
+	return Sortlistpair{addr, mask[0]}
 }
 
 func NewOption(t string, val ...int) Option {

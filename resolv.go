@@ -44,7 +44,7 @@ func (this *Conf) Add(opts ...interface{}) error {
 			this.Options = o.([]Option)
 		case Option:
 			if _, e := parseOption(o.(Option).String()); e != nil {
-				err =  multierror.Append(err, fmt.Errorf("Unknown option %s", o.(Option)))
+				err = multierror.Append(err, fmt.Errorf("Unknown option %s", o.(Option)))
 				break
 			}
 			if o := this.Find(opt); o != nil {
@@ -60,28 +60,32 @@ func (this *Conf) Add(opts ...interface{}) error {
 	return err.ErrorOrNil()
 }
 
-func (this *Conf) Remove(o interface{}) error {
-	i := this.indexOf(this.Find(o))
-	_, isdom := o.(Domain)
-	if i == -1 && !isdom {
-		return fmt.Errorf("Not found")
-	}
+func (this *Conf) Remove(opts ...interface{}) error {
+	var err *multierror.Error
+	for _, o := range opts {
+		i := this.indexOf(this.Find(o))
+		_, isdom := o.(Domain)
+		if i == -1 && !isdom {
+			err = multierror.Append(err, fmt.Errorf("Not found"))
+			continue
+		}
 
-	switch opt := o.(type) {
-	case Nameserver:
-		this.Nameservers = append(this.Nameservers[:i], this.Nameservers[i+1:]...)
-	case Domain:
-		this.Domain = Domain{""}
-	case SearchDomain:
-		this.Search.Domains = append(this.Search.Domains[:i], this.Search.Domains[i+1:]...)
-	case Sortlistpair:
-		this.Sortlist.Pairs = append(this.Sortlist.Pairs[:i], this.Sortlist.Pairs[i+1:]...)
-	case Option:
-		this.Options = append(this.Options[:i], this.Options[i+1:]...)
-	default:
-		return fmt.Errorf("Unknown option type %v", opt)
+		switch opt := o.(type) {
+		case Nameserver:
+			this.Nameservers = append(this.Nameservers[:i], this.Nameservers[i+1:]...)
+		case Domain:
+			this.Domain = Domain{""}
+		case SearchDomain:
+			this.Search.Domains = append(this.Search.Domains[:i], this.Search.Domains[i+1:]...)
+		case Sortlistpair:
+			this.Sortlist.Pairs = append(this.Sortlist.Pairs[:i], this.Sortlist.Pairs[i+1:]...)
+		case Option:
+			this.Options = append(this.Options[:i], this.Options[i+1:]...)
+		default:
+			err = multierror.Append(err, fmt.Errorf("Unknown option type %v", opt))
+		}
 	}
-	return nil
+	return err.ErrorOrNil()
 }
 
 func (this Conf) Find(o interface{}) interface{} {
