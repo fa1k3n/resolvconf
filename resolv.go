@@ -1,3 +1,5 @@
+// Package resolvconf provides an interface to read, create and manipulate
+// resolv.conf files
 package resolvconf
 
 import (
@@ -7,6 +9,11 @@ import (
 	"log"
 )
 
+// Add items to the configuration.
+//
+// Errors are accumulated and can be reinterpreted as 
+// an multierror type. Logging will occur if logging has
+// been setup using the EnableLogging call
 func (this *Conf) Add(opts ...interface{}) error {
 	var err *multierror.Error
 	for _, o := range opts {
@@ -67,6 +74,11 @@ func (this *Conf) Add(opts ...interface{}) error {
 	return err.ErrorOrNil()
 }
 
+// Remove items from the configuration
+//
+// Errors are accumulated and can be reinterpreted as an multierror type.
+// Logging will occur if logging has been setup using the EnableLogging
+// call
 func (this *Conf) Remove(opts ...interface{}) error {
 	var err *multierror.Error
 	for _, o := range opts {
@@ -100,6 +112,10 @@ func (this *Conf) Remove(opts ...interface{}) error {
 	return err.ErrorOrNil()
 }
 
+// Enable logging
+//
+// Setup logging with given writer as output, currently only one
+// writer is supported. This will use LstdFlags for the logging
 func (this *Conf) EnableLogging(writer ...io.Writer) error {
 	if this.logger == nil {
 		return fmt.Errorf("Logging has not been setup properly")
@@ -109,6 +125,9 @@ func (this *Conf) EnableLogging(writer ...io.Writer) error {
 	return nil
 }
 
+// Find an configure item
+//
+// Returns nil if item is not found
 func (this Conf) Find(o interface{}) interface{} {
 	i := this.indexOf(o)
 	if i == -1 {

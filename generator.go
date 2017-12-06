@@ -13,6 +13,9 @@ var templates = map[string]string{
 	"search":     "{{if .Search.Domains}}search{{range $dom := .Search.Domains}} {{$dom.Name}}{{end}}\n\n{{end}}",
 }
 
+// Write configuration to an io.Writer
+//
+// return an error if unsuccessful
 func (this Conf) Write(w io.Writer) error {
 
 	for _, key := range []string{"domain", "nameserver", "sortlist", "search", "options"} {

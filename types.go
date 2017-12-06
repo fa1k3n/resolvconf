@@ -8,11 +8,11 @@ import (
 )
 
 type Conf struct {
-	Nameservers []nameserver
-	Domain      domain
-	Search      search
-	Sortlist    sortlist
-	Options     []option
+	Nameservers []nameserver  // List of added nameservers
+	Domain      domain        // 'domain' item
+	Search      search        // List of the search domains
+	Sortlist    sortlist      // 'sortlist' items
+	Options     []option      // 'options' items
 	logger      *log.Logger
 }
 
@@ -60,24 +60,35 @@ func (o option) String() string {
 	return fmt.Sprintf("%s:%d", o.Type, o.Value)
 }
 
+// Create a new configuration
 func New() *Conf {
 	c := new(Conf)
 	c.logger = log.New(ioutil.Discard, "[resolvconf] ", 0)
 	return c
 }
 
+// Create a nameserver item
 func Nameserver(IP net.IP) nameserver {
 	return nameserver{IP}
 }
 
+// Creates a new domain that will be used
+// as value for the 'domain' option in the generated file
 func Domain(dom string) domain {
 	return domain{dom}
 }
 
+// Create a new search domain that will be added 
+// to the 'search' list in the generated file
 func SearchDomain(dom string) searchDomain {
 	return searchDomain{dom}
 }
 
+// Create a new sortlist that will be added to the 
+// 'sort' item in the resolv.conf file. 
+// If mask is given the output will be IP/mask e.g.
+// 8.8.8.8/255.255.255.0 otherwise output will be
+// IP only, e.g. 8.8.8.8
 func SortlistPair(addr net.IP, mask ...net.IP) sortlistpair {
 	if len(mask) > 1 {
 		return sortlistpair{nil, nil}
@@ -87,6 +98,10 @@ func SortlistPair(addr net.IP, mask ...net.IP) sortlistpair {
 	return sortlistpair{addr, mask[0]}
 }
 
+// Create a new option, val must be a positive number if used.
+// Witout val the option will be interpreted as a bolean e.g. 
+// debug , with a val the option will be interpreted as an
+// setvalue, e.g. ndots:5
 func Option(t string, val ...int) option {
 	// Check va
 	opt := option{t, -1}

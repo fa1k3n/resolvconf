@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
+	"os"
 )
 
 func TestNewConf(t *testing.T) {
@@ -297,4 +298,11 @@ func TestLogging(t *testing.T) {
 	err = conf.Remove(resolvconf.Option("debug"))
 	assert.Contains(t, buf.String(), "Removed option debug")
 
+}
+
+func ExampleAdd() {
+	conf := resolvconf.New()
+	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	conf.Write(os.Stdout)
+	// Output: nameserver 8.8.8.8
 }
