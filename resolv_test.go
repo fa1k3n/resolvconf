@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"testing"
+	"net/http"
+	"log"
 )
 
 func TestNewConf(t *testing.T) {
@@ -305,3 +307,38 @@ func ExampleConf_Add() {
 	conf.Write(os.Stdout)
 	// Output: nameserver 8.8.8.8
 }
+
+func ExampleConf_Add_second() {
+	conf := resolvconf.New()
+	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")), resolvconf.Option("debug"))
+	conf.Write(os.Stdout)
+	// Output: nameserver 8.8.8.8
+	//
+	// options debug
+}
+
+func ExampleConf_Remove() {
+	conf := resolvconf.New()
+	ns := resolvconf.Nameserver(net.ParseIP("8.8.8.8"))
+	conf.Add(ns, resolvconf.Nameserver(net.ParseIP("8.8.8.9")))
+	conf.Remove(ns)
+	conf.Write(os.Stdout)
+	// Output: nameserver 8.8.8.9
+}
+
+func Example() {
+	res, err := http.Get("https://gist.githubusercontent.com/turadg/7876784/raw/c7f2500fa4762cfe443e30c64c6ed8a888f6ac74/resolv.conf")
+	if err != nil {
+		log.Fatal(err)
+	}
+	conf, err := resolvconf.ReadConf(res.Body)
+	res.Body.Close()
+	conf.Remove(resolvconf.Nameserver(net.ParseIP("8.8.4.4")))
+	conf.Add(resolvconf.Domain("foo.bar"), resolvconf.SortlistPair(net.ParseIP("130.155.160.0"), net.ParseIP("255.255.240.0")))
+	conf.Write(os.Stdout)
+	// Output: domain foo.bar
+	// nameserver 8.8.8.8
+	//
+	// sortlist 130.155.160.0/255.255.240.0
+}
+
