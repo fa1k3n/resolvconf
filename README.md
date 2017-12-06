@@ -1,5 +1,7 @@
 # resolvconf
 
+[![Build Status](https://travis-ci.org/Fa1k3n/resolvconf.svg?branch=master)](https://travis-ci.org/Fa1k3n/resolvconf)
+
 Go package that simplifies manipulating resolv.conf files
 
 The package provides a way to read and parse existing resolv.conf files from an io.Reader or to create a new file. The read objects can then be manipulated and written to a io.Writer object of your choice. 
