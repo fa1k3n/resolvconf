@@ -16,8 +16,7 @@ var templates = map[string]string{
 // Write configuration to an io.Writer
 //
 // return an error if unsuccessful
-func (this Conf) Write(w io.Writer) error {
-
+func (this *Conf) Write(w io.Writer) error {
 	for _, key := range []string{"domain", "nameserver", "sortlist", "search", "options"} {
 		tmpl, err := template.New(key).Parse(templates[key])
 		if err != nil {

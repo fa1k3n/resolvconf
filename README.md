@@ -1,6 +1,6 @@
 # resolvconf
 
-[![Build Status](https://travis-ci.org/Fa1k3n/resolvconf.svg?branch=master)](https://travis-ci.org/Fa1k3n/resolvconf)
+[![Build Status](https://travis-ci.org/Fa1k3n/resolvconf.svg?branch=master)](https://travis-ci.org/Fa1k3n/resolvconf) [![Go Report Card](https://goreportcard.com/badge/github.com/fa1k3n/resolvconf)](https://goreportcard.com/report/github.com/fa1k3n/resolvconf) [![Go Documentation](https://godoc.org/github.com/Fa1k3n/resolvconf?status.svg)](https://godoc.org/github.com/Fa1k3n/resolvconf)
 
 Go package that simplifies manipulating resolv.conf files
 

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net"
-	"testing"
 	"os"
+	"testing"
 )
 
 func TestNewConf(t *testing.T) {

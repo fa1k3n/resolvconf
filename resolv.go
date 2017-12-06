@@ -11,7 +11,7 @@ import (
 
 // Add items to the configuration.
 //
-// Errors are accumulated and can be reinterpreted as 
+// Errors are accumulated and can be reinterpreted as
 // an multierror type. Logging will occur if logging has
 // been setup using the EnableLogging call
 func (this *Conf) Add(opts ...interface{}) error {
@@ -112,9 +112,7 @@ func (this *Conf) Remove(opts ...interface{}) error {
 	return err.ErrorOrNil()
 }
 
-// Enable logging
-//
-// Setup logging with given writer as output, currently only one
+// EnableLogging enables internal logging with given writer as output, currently only one
 // writer is supported. This will use LstdFlags for the logging
 func (this *Conf) EnableLogging(writer ...io.Writer) error {
 	if this.logger == nil {
@@ -125,9 +123,7 @@ func (this *Conf) EnableLogging(writer ...io.Writer) error {
 	return nil
 }
 
-// Find an configure item
-//
-// Returns nil if item is not found
+// Find an configure item returns nil if item is not found
 func (this Conf) Find(o interface{}) interface{} {
 	i := this.indexOf(o)
 	if i == -1 {

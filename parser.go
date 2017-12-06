@@ -53,12 +53,12 @@ func parseLine(line string) (interface{}, error) {
 			if i == 10 {
 				return sortlist{pairs}, fmt.Errorf("Too long sortlist, 10 is maximum")
 			}
-			addr_nm_str := strings.Split(pair, "/")
-			if addr = net.ParseIP(addr_nm_str[0]); addr == nil {
+			addrNmStr := strings.Split(pair, "/")
+			if addr = net.ParseIP(addrNmStr[0]); addr == nil {
 				return nil, fmt.Errorf("Malformed IP address %s in searchlist", pair)
 			}
-			if len(addr_nm_str) > 1 {
-				if nm = net.ParseIP(addr_nm_str[1]); nm == nil {
+			if len(addrNmStr) > 1 {
+				if nm = net.ParseIP(addrNmStr[1]); nm == nil {
 					return nil, fmt.Errorf("Malformed netmask %s in searchlist", pair)
 				}
 			}
@@ -68,8 +68,8 @@ func parseLine(line string) (interface{}, error) {
 		return sortlist{pairs}, nil
 	case "options":
 		var opts []option
-		for _, opt_str := range toks[1:] {
-			opt, err := parseOption(opt_str)
+		for _, optStr := range toks[1:] {
+			opt, err := parseOption(optStr)
 			if err != nil {
 				return nil, err
 			}
@@ -83,18 +83,18 @@ func parseLine(line string) (interface{}, error) {
 
 // ReadConf will read a configuration from given io.Reader
 //
-// Returns a new Conf object when succesful otherwise 
+// Returns a new Conf object when succesful otherwise
 // nil and an error
 func ReadConf(r io.Reader) (*Conf, error) {
-	var stored_err error
-	stored_err = nil
+	var storedErr error
+	storedErr = nil
 	conf := New()
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return conf, err
 	}
-	conf_file := strings.TrimSpace(string(b[:]))
-	lines := strings.Split(conf_file, "\n")
+	confFile := strings.TrimSpace(string(b[:]))
+	lines := strings.Split(confFile, "\n")
 	for _, line := range lines {
 		// Check if this line is a comment or empty
 		if len(line) == 0 || line[0] == byte('#') || line[0] == byte(';') {
@@ -109,12 +109,12 @@ func ReadConf(r io.Reader) (*Conf, error) {
 			}
 			// Otherwise add this error to stored errors
 			// and continue
-			stored_err = fmt.Errorf("%s\n%s", err, stored_err)
+			storedErr = fmt.Errorf("%s\n%s", err, storedErr)
 		}
 
 		if err := conf.Add(opt); err != nil {
 			return conf, err
 		}
 	}
-	return conf, stored_err
+	return conf, storedErr
 }
