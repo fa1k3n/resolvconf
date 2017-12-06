@@ -14,58 +14,58 @@ import (
 // Errors are accumulated and can be reinterpreted as
 // an multierror type. Logging will occur if logging has
 // been setup using the EnableLogging call
-func (this *Conf) Add(opts ...interface{}) error {
+func (conf *Conf) Add(opts ...interface{}) error {
 	var err *multierror.Error
 	for _, o := range opts {
 		switch opt := o.(type) {
 		case nameserver:
-			if len(this.Nameservers)+1 > 3 {
+			if len(conf.Nameservers)+1 > 3 {
 				err = multierror.Append(err, fmt.Errorf("Too many nameserver configs, max is 3"))
 				break
 			}
-			// Search if this nameserver is already added
-			if this.Find(o) != nil {
+			// Search if conf nameserver is already added
+			if conf.Find(o) != nil {
 				err = multierror.Append(err, fmt.Errorf("Nameserver %s already exists in conf", opt))
 				break
 			}
 
-			this.logger.Printf("Added nameserver %s", opt.IP)
-			this.Nameservers = append(this.Nameservers, opt)
+			conf.logger.Printf("Added nameserver %s", opt.IP)
+			conf.Nameservers = append(conf.Nameservers, opt)
 		case domain:
-			this.logger.Printf("Added domain %s", opt.Name)
-			this.Domain = o.(domain)
+			conf.logger.Printf("Added domain %s", opt.Name)
+			conf.Domain = o.(domain)
 		case search:
-			this.Search = o.(search)
+			conf.Search = o.(search)
 		case searchDomain:
-			// Search if this search domain is already added
-			if this.Find(o) != nil {
+			// Search if conf search domain is already added
+			if conf.Find(o) != nil {
 				err = multierror.Append(err, fmt.Errorf("Search domain %s already exists in conf", opt))
 				break
 			}
-			this.logger.Printf("Added search domain %s", opt.Name)
-			this.Search.Domains = append(this.Search.Domains, opt)
+			conf.logger.Printf("Added search domain %s", opt.Name)
+			conf.Search.Domains = append(conf.Search.Domains, opt)
 		case sortlist:
-			this.Sortlist = o.(sortlist)
+			conf.Sortlist = o.(sortlist)
 		case sortlistpair:
-			if i := this.Find(o); i != nil {
+			if i := conf.Find(o); i != nil {
 				err = multierror.Append(err, fmt.Errorf("Searchlist pair %s already exists in conf", opt))
 				break
 			}
-			this.logger.Printf("Added sortlist pair %s", opt)
-			this.Sortlist.Pairs = append(this.Sortlist.Pairs, opt)
+			conf.logger.Printf("Added sortlist pair %s", opt)
+			conf.Sortlist.Pairs = append(conf.Sortlist.Pairs, opt)
 		case []option:
-			this.Options = o.([]option)
+			conf.Options = o.([]option)
 		case option:
 			if _, e := parseOption(o.(option).String()); e != nil {
 				err = multierror.Append(err, fmt.Errorf("Unknown option %s", o.(option)))
 				break
 			}
-			if o := this.Find(opt); o != nil {
+			if o := conf.Find(opt); o != nil {
 				err = multierror.Append(err, fmt.Errorf("Option %s is already present", o.(option).Type))
 				break
 			}
-			this.logger.Printf("Added option %s", opt)
-			this.Options = append(this.Options, opt)
+			conf.logger.Printf("Added option %s", opt)
+			conf.Options = append(conf.Options, opt)
 
 		default:
 			err = multierror.Append(err, fmt.Errorf("Unknown option type %v", opt))
@@ -79,10 +79,10 @@ func (this *Conf) Add(opts ...interface{}) error {
 // Errors are accumulated and can be reinterpreted as an multierror type.
 // Logging will occur if logging has been setup using the EnableLogging
 // call
-func (this *Conf) Remove(opts ...interface{}) error {
+func (conf *Conf) Remove(opts ...interface{}) error {
 	var err *multierror.Error
 	for _, o := range opts {
-		i := this.indexOf(this.Find(o))
+		i := conf.indexOf(conf.Find(o))
 		_, isdom := o.(domain)
 		if i == -1 && !isdom {
 			err = multierror.Append(err, fmt.Errorf("Not found"))
@@ -91,20 +91,20 @@ func (this *Conf) Remove(opts ...interface{}) error {
 
 		switch opt := o.(type) {
 		case nameserver:
-			this.logger.Printf("Removed nameserver %s", opt.IP)
-			this.Nameservers = append(this.Nameservers[:i], this.Nameservers[i+1:]...)
+			conf.logger.Printf("Removed nameserver %s", opt.IP)
+			conf.Nameservers = append(conf.Nameservers[:i], conf.Nameservers[i+1:]...)
 		case domain:
-			this.logger.Printf("Removed domain %s", opt.Name)
-			this.Domain = Domain("")
+			conf.logger.Printf("Removed domain %s", opt.Name)
+			conf.Domain = Domain("")
 		case searchDomain:
-			this.logger.Printf("Removed search domain %s", opt.Name)
-			this.Search.Domains = append(this.Search.Domains[:i], this.Search.Domains[i+1:]...)
+			conf.logger.Printf("Removed search domain %s", opt.Name)
+			conf.Search.Domains = append(conf.Search.Domains[:i], conf.Search.Domains[i+1:]...)
 		case sortlistpair:
-			this.logger.Printf("Removed sortlist pair %s", opt)
-			this.Sortlist.Pairs = append(this.Sortlist.Pairs[:i], this.Sortlist.Pairs[i+1:]...)
+			conf.logger.Printf("Removed sortlist pair %s", opt)
+			conf.Sortlist.Pairs = append(conf.Sortlist.Pairs[:i], conf.Sortlist.Pairs[i+1:]...)
 		case option:
-			this.logger.Printf("Removed option %s", opt)
-			this.Options = append(this.Options[:i], this.Options[i+1:]...)
+			conf.logger.Printf("Removed option %s", opt)
+			conf.Options = append(conf.Options[:i], conf.Options[i+1:]...)
 		default:
 			err = multierror.Append(err, fmt.Errorf("Unknown option type %v", opt))
 		}
@@ -113,58 +113,58 @@ func (this *Conf) Remove(opts ...interface{}) error {
 }
 
 // EnableLogging enables internal logging with given writer as output, currently only one
-// writer is supported. This will use LstdFlags for the logging
-func (this *Conf) EnableLogging(writer ...io.Writer) error {
-	if this.logger == nil {
+// writer is supported. conf will use LstdFlags for the logging
+func (conf *Conf) EnableLogging(writer ...io.Writer) error {
+	if conf.logger == nil {
 		return fmt.Errorf("Logging has not been setup properly")
 	}
-	this.logger.SetFlags(log.LstdFlags)
-	this.logger.SetOutput(writer[0])
+	conf.logger.SetFlags(log.LstdFlags)
+	conf.logger.SetOutput(writer[0])
 	return nil
 }
 
 // Find an configure item returns nil if item is not found
-func (this Conf) Find(o interface{}) interface{} {
-	i := this.indexOf(o)
+func (conf Conf) Find(o interface{}) interface{} {
+	i := conf.indexOf(o)
 	if i == -1 {
 		return nil
 	}
 
 	switch o.(type) {
 	case nameserver:
-		return this.Nameservers[i]
+		return conf.Nameservers[i]
 	case searchDomain:
-		return this.Search.Domains[i]
+		return conf.Search.Domains[i]
 	case sortlistpair:
-		return this.Sortlist.Pairs[i]
+		return conf.Sortlist.Pairs[i]
 	case option:
-		return this.Options[i]
+		return conf.Options[i]
 	}
 	return nil
 }
 
-func (this Conf) indexOf(o interface{}) int {
+func (conf Conf) indexOf(o interface{}) int {
 	switch o.(type) {
 	case nameserver:
-		for i, item := range this.Nameservers {
+		for i, item := range conf.Nameservers {
 			if item.IP.String() == o.(nameserver).IP.String() {
 				return i
 			}
 		}
 	case sortlistpair:
-		for i, sp := range this.Sortlist.Pairs {
+		for i, sp := range conf.Sortlist.Pairs {
 			if sp.Address.String() == o.(sortlistpair).Address.String() {
 				return i
 			}
 		}
 	case searchDomain:
-		for i, sd := range this.Search.Domains {
+		for i, sd := range conf.Search.Domains {
 			if sd.Name == o.(searchDomain).Name {
 				return i
 			}
 		}
 	case option:
-		for i, item := range this.Options {
+		for i, item := range conf.Options {
 			if item.Type == o.(option).Type {
 				return i
 			}

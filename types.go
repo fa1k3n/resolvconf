@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-// Represents a configuration object
+// Conf represents a configuration object
 type Conf struct {
 	Nameservers []nameserver // List of added nameservers
 	Domain      domain       // 'domain' item

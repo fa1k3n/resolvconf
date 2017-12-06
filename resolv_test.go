@@ -260,44 +260,43 @@ func TestLogging(t *testing.T) {
 	// Enable logging, test add nameserver
 	conf = resolvconf.New()
 	buf.Reset()
-	err = conf.EnableLogging(buf)
+	conf.EnableLogging(buf)
 	assert.Nil(t, err)
-	err = conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
 	assert.Contains(t, buf.String(), fmt.Sprintf("Added nameserver %s", net.ParseIP("8.8.8.8")))
 
 	// Enable logging, test remove nameserver
 	buf.Reset()
-	err = conf.Remove(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	conf.Remove(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
 	assert.Contains(t, buf.String(), fmt.Sprintf("Removed nameserver %s", net.ParseIP("8.8.8.8")))
 
 	// Add & remove domain
 	buf.Reset()
-	err = conf.Add(resolvconf.Domain("foo.bar"))
+	conf.Add(resolvconf.Domain("foo.bar"))
 	assert.Contains(t, buf.String(), "Added domain foo.bar")
-	err = conf.Remove(resolvconf.Domain("foo.bar"))
+	conf.Remove(resolvconf.Domain("foo.bar"))
 	assert.Contains(t, buf.String(), "Removed domain foo.bar")
 
 	// Add & remove search domain
 	buf.Reset()
-	err = conf.Add(resolvconf.SearchDomain("foo.bar"))
+	conf.Add(resolvconf.SearchDomain("foo.bar"))
 	assert.Contains(t, buf.String(), "Added search domain foo.bar")
-	err = conf.Remove(resolvconf.SearchDomain("foo.bar"))
+	conf.Remove(resolvconf.SearchDomain("foo.bar"))
 	assert.Contains(t, buf.String(), "Removed search domain foo.bar")
 
 	// Add & remove sort list pair
 	buf.Reset()
-	err = conf.Add(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
 	assert.Contains(t, buf.String(), "Added sortlist pair 8.8.8.8")
-	err = conf.Remove(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
+	conf.Remove(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
 	assert.Contains(t, buf.String(), "Removed sortlist pair 8.8.8.8")
 
 	// Add & remove option
 	buf.Reset()
-	err = conf.Add(resolvconf.Option("debug"))
+	conf.Add(resolvconf.Option("debug"))
 	assert.Contains(t, buf.String(), "Added option debug")
-	err = conf.Remove(resolvconf.Option("debug"))
+	conf.Remove(resolvconf.Option("debug"))
 	assert.Contains(t, buf.String(), "Removed option debug")
-
 }
 
 func ExampleAdd() {

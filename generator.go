@@ -16,14 +16,14 @@ var templates = map[string]string{
 // Write configuration to an io.Writer
 //
 // return an error if unsuccessful
-func (this *Conf) Write(w io.Writer) error {
+func (conf *Conf) Write(w io.Writer) error {
 	for _, key := range []string{"domain", "nameserver", "sortlist", "search", "options"} {
 		tmpl, err := template.New(key).Parse(templates[key])
 		if err != nil {
 			return err
 		}
 
-		if err := tmpl.Execute(w, this); err != nil {
+		if err := tmpl.Execute(w, conf); err != nil {
 			return err
 		}
 	}

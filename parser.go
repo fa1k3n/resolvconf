@@ -83,7 +83,7 @@ func parseLine(line string) (interface{}, error) {
 
 // ReadConf will read a configuration from given io.Reader
 //
-// Returns a new Conf object when succesful otherwise
+// Returns a new Conf object when successful otherwise
 // nil and an error
 func ReadConf(r io.Reader) (*Conf, error) {
 	var storedErr error
