@@ -299,7 +299,7 @@ func TestLogging(t *testing.T) {
 	assert.Contains(t, buf.String(), "Removed option debug")
 }
 
-func ExampleAdd() {
+func ExampleAdd_Conf() {
 	conf := resolvconf.New()
 	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
 	conf.Write(os.Stdout)
