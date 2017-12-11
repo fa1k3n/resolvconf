@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"net"
+	"net/http"
 	"os"
 	"testing"
-	"net/http"
-	"log"
 )
 
 func TestNewConf(t *testing.T) {
@@ -17,55 +17,52 @@ func TestNewConf(t *testing.T) {
 	assert.NotNil(t, conf)
 }
 
-func TestAddNameserver(t *testing.T) {
+func TestAddNewNameserver(t *testing.T) {
 	conf := resolvconf.New()
-	ns := resolvconf.Nameserver(net.ParseIP("8.8.8.8"))
+	ns := resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))
 	err := conf.Add(ns)
 	assert.Nil(t, err)
 	assert.NotNil(t, conf.Find(ns))
 }
 
-func TestRemoveNameserver(t *testing.T) {
+func TestRemoveNewNameserver(t *testing.T) {
 	conf := resolvconf.New()
-	ns := resolvconf.Nameserver(net.ParseIP("8.8.8.8"))
+	ns := resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))
 	conf.Add(ns)
 	err := conf.Remove(ns)
 	assert.Nil(t, err)
 	assert.Nil(t, conf.Find(ns))
 }
 
-func TestRemoveNonExistingNameserver(t *testing.T) {
+func TestRemoveNonExistingNewNameserver(t *testing.T) {
 	conf := resolvconf.New()
 	ip := net.ParseIP("8.8.8.8")
-	err := conf.Remove(resolvconf.Nameserver(ip))
+	err := conf.Remove(resolvconf.NewNameserver(ip))
 	assert.NotNil(t, err)
 }
 
 func TestAddSecondDomainReplacesFirst(t *testing.T) {
 	conf := resolvconf.New()
-	foo := resolvconf.Domain("foo.com")
-	bar := resolvconf.Domain("bar.com")
-	conf.Add(foo)
-	conf.Add(bar)
-	assert.Equal(t, "bar.com", conf.Domain.Name)
+	conf.Add(resolvconf.NewDomain("foo.com"), resolvconf.NewDomain("bar.com"))
+	assert.Equal(t, "bar.com", conf.Domain().Name)
 }
 
 func TestRemoveDomain(t *testing.T) {
 	conf := resolvconf.New()
-	foo := resolvconf.Domain("foo.com")
+	foo := resolvconf.NewDomain("foo.com")
 	conf.Add(foo)
-	assert.Equal(t, "foo.com", conf.Domain.Name)
+	assert.Equal(t, "foo.com", conf.Domain().Name)
 	conf.Remove(foo)
-	assert.Equal(t, "", conf.Domain.Name)
+	assert.Equal(t, "", conf.Domain().Name)
 }
 
 func TestBasicSearchDomain(t *testing.T) {
 	conf := resolvconf.New()
-	dom := resolvconf.SearchDomain("foo.com")
+	dom := resolvconf.NewSearchDomain("foo.com")
 	// Add a search domain
 	err := conf.Add(dom)
 	assert.Nil(t, err)
-	assert.Equal(t, dom.Name, conf.Search.Domains[0].Name)
+	assert.NotNil(t, conf.Find(dom))
 
 	// Test that search domain exists
 	assert.NotNil(t, conf.Find(dom))
@@ -73,12 +70,12 @@ func TestBasicSearchDomain(t *testing.T) {
 	// Add search domain again should yield error
 	err = conf.Add(dom)
 	assert.NotNil(t, err)
-	assert.Equal(t, 1, len(conf.Search.Domains))
+	assert.Equal(t, 1, len(conf.Search()))
 
 	// Remove search domain
 	err = conf.Remove(dom)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Search.Domains))
+	assert.Equal(t, 0, len(conf.Search()))
 
 	// Test that search domain does not exists
 	assert.Nil(t, conf.Find(dom))
@@ -90,26 +87,26 @@ func TestBasicSearchDomain(t *testing.T) {
 
 func TestBasicSortlist(t *testing.T) {
 	conf := resolvconf.New()
-	sp := resolvconf.SortlistPair(net.ParseIP("8.8.8.8"), net.ParseIP("255.255.255.0"))
+	sp := resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0"))
 
 	// Add a pair
 	err := conf.Add(sp)
 	assert.Nil(t, err)
-	assert.Equal(t, sp.Address.String(), conf.Sortlist.Pairs[0].Address.String())
-	assert.Equal(t, sp.Netmask.String(), conf.Sortlist.Pairs[0].Netmask.String())
+	assert.Equal(t, sp.Address.String(), conf.Sortlist()[0].Address.String())
+	assert.Equal(t, sp.Netmask.String(), conf.Sortlist()[0].Netmask.String())
 
 	// Check if pair exists
-	assert.NotNil(t, conf.Find(sp))
+	assert.NotNil(t, conf.Find(*sp))
 
 	// Add pair again should yield error
 	err = conf.Add(sp)
 	assert.NotNil(t, err)
-	assert.Equal(t, 1, len(conf.Sortlist.Pairs))
+	assert.Equal(t, 1, len(conf.Sortlist()))
 
 	// Remove sortlist pair
-	err = conf.Remove(sp)
+	err = conf.Remove(*sp)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Sortlist.Pairs))
+	assert.Equal(t, 0, len(conf.Sortlist()))
 
 	// Test that sortlistpair  does not exists
 	assert.Nil(t, conf.Find(sp))
@@ -119,56 +116,50 @@ func TestBasicSortlist(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestOption(t *testing.T) {
+func TestNewOption(t *testing.T) {
 	// New boolean option
-	opt := resolvconf.Option("debug")
+	opt := resolvconf.NewOption("debug")
 	assert.Equal(t, "debug", opt.Type)
 	assert.Equal(t, -1, opt.Value)
 
 	// New integer option
-	opt = resolvconf.Option("ndots", 3)
+	opt = resolvconf.NewOption("ndots").Set(3)
 	assert.Equal(t, "ndots", opt.Type)
 	assert.Equal(t, 3, opt.Value)
 
-	// Too many values
-	opt = resolvconf.Option("ndots", 3, 4)
-	assert.Equal(t, "", opt.Type)
-	assert.Equal(t, -1, opt.Value)
-
 	// Bad value
-	opt = resolvconf.Option("ndots", -3)
-	assert.Equal(t, "", opt.Type)
-	assert.Equal(t, -1, opt.Value)
+	opt = resolvconf.NewOption("ndots").Set(-3)
+	assert.NotEqual(t, -3, opt.Value)
 
 	// Unknown option
-	opt = resolvconf.Option("foo")
-	assert.Equal(t, "", opt.Type)
-	assert.Equal(t, -1, opt.Value)
+	//opt = resolvconf.NewOption("foo")
+	//assert.Equal(t, "foo", opt.Type)
+	//assert.Equal(t, -1, opt.Value)
 }
 
-func TestBasicOption(t *testing.T) {
+func TestBasicNewOption(t *testing.T) {
 	conf := resolvconf.New()
 
 	// Test to set option
-	opt := resolvconf.Option("debug")
+	opt := resolvconf.NewOption("debug")
 	err := conf.Add(opt)
 	assert.Nil(t, err)
-	assert.Equal(t, "debug", conf.Options[0].Type)
-	assert.Equal(t, 1, len(conf.Options))
+	assert.Equal(t, "debug", conf.Options()[0].Type)
+	assert.Equal(t, 1, len(conf.Options()))
 
 	// Test if option is set
-	o := conf.Find(opt)
+	o := conf.Find(*opt)
 	assert.NotNil(t, o)
 
 	// Test to set option again should yiled error
 	err = conf.Add(opt)
 	assert.NotNil(t, err)
-	assert.Equal(t, 1, len(conf.Options))
+	assert.Equal(t, 1, len(conf.Options()))
 
 	// Test to remove option
-	err = conf.Remove(opt)
+	err = conf.Remove(*opt)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(conf.Options))
+	assert.Equal(t, 0, len(conf.Options()))
 
 	// Test that option is not set
 	o = conf.Find(opt)
@@ -183,71 +174,71 @@ func TestOptionWithValue(t *testing.T) {
 	conf := resolvconf.New()
 
 	// Test to set option
-	opt := resolvconf.Option("ndots", 4)
+	opt := resolvconf.NewOption("ndots").Set(4)
 	err := conf.Add(opt)
 	assert.Nil(t, err)
-	assert.Equal(t, "ndots", conf.Options[0].Type)
-	assert.Equal(t, 4, conf.Options[0].Value)
-	assert.Equal(t, 1, len(conf.Options))
+	assert.Equal(t, "ndots", conf.Options()[0].Type)
+	assert.Equal(t, 4, conf.Options()[0].Value)
+	assert.Equal(t, 1, len(conf.Options()))
 }
 
 func TestAddMultipleItems(t *testing.T) {
 	conf := resolvconf.New()
-	opt := resolvconf.Option("ndots", 4)
-	ns := resolvconf.Nameserver(net.ParseIP("8.8.8.8"))
+	opt := resolvconf.NewOption("ndots").Set(4)
+	ns := resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))
 	err := conf.Add(opt, ns)
 	assert.Nil(t, err)
-	assert.Equal(t, "ndots", conf.Options[0].Type)
-	assert.Equal(t, 4, conf.Options[0].Value)
+	assert.Equal(t, "ndots", conf.Options()[0].Type)
+	assert.Equal(t, 4, conf.Options()[0].Value)
 	assert.NotNil(t, conf.Find(ns))
 }
 
 func TestAddItemsWithoutVariable(t *testing.T) {
 	conf := resolvconf.New()
-	err := conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")),
-		resolvconf.Option("debug"))
+	err := conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")),
+		resolvconf.NewOption("debug"))
 	assert.Nil(t, err)
-	assert.Equal(t, "debug", conf.Options[0].Type)
-	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
+	assert.Equal(t, "debug", conf.Options()[0].Type)
+	assert.NotNil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))))
 }
 
 func TestAddBadOptionInList(t *testing.T) {
 	conf := resolvconf.New()
-	err := conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")),
-		resolvconf.Option("ndots", -3),
-		resolvconf.Option("debug"))
+	err := conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")),
+		resolvconf.NewOption("ndots").Set(-3),
+		resolvconf.NewOption("debug"))
 
 	assert.NotNil(t, err)
-	assert.Equal(t, 1, len(conf.Options))
-	assert.Equal(t, "debug", conf.Options[0].Type)
-	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
+	assert.Equal(t, 1, len(conf.Options()))
+	assert.Equal(t, "debug", conf.Options()[0].Type)
+	assert.NotNil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))))
 }
 
 func TestRemoveMultipleItems(t *testing.T) {
 	conf := resolvconf.New()
-	err := conf.Add(resolvconf.Option("ndots", 4), resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	err := conf.Add(resolvconf.NewOption("ndots").Set(4), resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
-	assert.NotNil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
-	assert.Equal(t, 1, len(conf.Options))
+	assert.NotNil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))))
+	assert.Equal(t, 1, len(conf.Options()))
 
-	err = conf.Remove(resolvconf.Option("ndots", 4), resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	err = conf.Remove(*resolvconf.NewOption("ndots").Set(4), resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
-	assert.Nil(t, conf.Find(resolvconf.Nameserver(net.ParseIP("8.8.8.8"))))
-	assert.Equal(t, 0, len(conf.Options))
+	assert.Nil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))))
+	assert.Equal(t, 0, len(conf.Options()))
 }
 
 func TestVariadicStorlistPair(t *testing.T) {
 	conf := resolvconf.New()
-	err := conf.Add(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
+	err := conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
-	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist.Pairs[0].Address)
-	assert.Equal(t, net.ParseIP(""), conf.Sortlist.Pairs[0].Netmask)
+	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist()[0].Address)
+	assert.Equal(t, net.ParseIP(""), conf.Sortlist()[0].Netmask)
 
 	conf = resolvconf.New()
-	err = conf.Add(resolvconf.SortlistPair(net.ParseIP("8.8.8.8"), net.ParseIP("255.255.255.0")))
+	err = conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0")))
 	assert.Nil(t, err)
-	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist.Pairs[0].Address)
-	assert.Equal(t, net.ParseIP("255.255.255.0"), conf.Sortlist.Pairs[0].Netmask)
+	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist()[0].Address)
+	assert.Equal(t, net.ParseIP("255.255.255.0"), conf.Sortlist()[0].Netmask)
 }
 
 func TestLogging(t *testing.T) {
@@ -255,62 +246,62 @@ func TestLogging(t *testing.T) {
 	// Nothing is logged if not enabeled
 	conf := resolvconf.New()
 	buf := new(bytes.Buffer)
-	err := conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	err := conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
-	assert.NotContains(t, buf.String(), fmt.Sprintf("Added nameserver %s", net.ParseIP("8.8.8.8")))
+	assert.NotContains(t, buf.String(), fmt.Sprintf("Added Nameserver %s", net.ParseIP("8.8.8.8")))
 
-	// Enable logging, test add nameserver
+	// Enable logging, test add Nameserver
 	conf = resolvconf.New()
 	buf.Reset()
 	conf.EnableLogging(buf)
 	assert.Nil(t, err)
-	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
-	assert.Contains(t, buf.String(), fmt.Sprintf("Added nameserver %s", net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+	assert.Contains(t, buf.String(), fmt.Sprintf("Added Nameserver %s", net.ParseIP("8.8.8.8")))
 
-	// Enable logging, test remove nameserver
+	// Enable logging, test remove Nameserver
 	buf.Reset()
-	conf.Remove(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	conf.Remove(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	assert.Contains(t, buf.String(), fmt.Sprintf("Removed nameserver %s", net.ParseIP("8.8.8.8")))
 
 	// Add & remove domain
 	buf.Reset()
-	conf.Add(resolvconf.Domain("foo.bar"))
+	conf.Add(resolvconf.NewDomain("foo.bar"))
 	assert.Contains(t, buf.String(), "Added domain foo.bar")
-	conf.Remove(resolvconf.Domain("foo.bar"))
+	conf.Remove(resolvconf.NewDomain("foo.bar"))
 	assert.Contains(t, buf.String(), "Removed domain foo.bar")
 
 	// Add & remove search domain
 	buf.Reset()
-	conf.Add(resolvconf.SearchDomain("foo.bar"))
+	conf.Add(resolvconf.NewSearchDomain("foo.bar"))
 	assert.Contains(t, buf.String(), "Added search domain foo.bar")
-	conf.Remove(resolvconf.SearchDomain("foo.bar"))
-	assert.Contains(t, buf.String(), "Removed search domain foo.bar")
+	conf.Remove(resolvconf.NewSearchDomain("foo.bar"))
+	assert.Contains(t, buf.String(), "Removed searchdomain foo.bar")
 
 	// Add & remove sort list pair
 	buf.Reset()
-	conf.Add(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
 	assert.Contains(t, buf.String(), "Added sortlist pair 8.8.8.8")
-	conf.Remove(resolvconf.SortlistPair(net.ParseIP("8.8.8.8")))
-	assert.Contains(t, buf.String(), "Removed sortlist pair 8.8.8.8")
+	conf.Remove(*resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
+	assert.Contains(t, buf.String(), "Removed sortlistpair 8.8.8.8")
 
 	// Add & remove option
 	buf.Reset()
-	conf.Add(resolvconf.Option("debug"))
+	conf.Add(resolvconf.NewOption("debug"))
 	assert.Contains(t, buf.String(), "Added option debug")
-	conf.Remove(resolvconf.Option("debug"))
+	conf.Remove(*resolvconf.NewOption("debug"))
 	assert.Contains(t, buf.String(), "Removed option debug")
 }
 
 func ExampleConf_Add() {
 	conf := resolvconf.New()
-	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	conf.Write(os.Stdout)
 	// Output: nameserver 8.8.8.8
 }
 
 func ExampleConf_Add_second() {
 	conf := resolvconf.New()
-	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")), resolvconf.Option("debug"))
+	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")), resolvconf.NewOption("debug"))
 	conf.Write(os.Stdout)
 	// Output: nameserver 8.8.8.8
 	//
@@ -319,8 +310,8 @@ func ExampleConf_Add_second() {
 
 func ExampleConf_Remove() {
 	conf := resolvconf.New()
-	ns := resolvconf.Nameserver(net.ParseIP("8.8.8.8"))
-	conf.Add(ns, resolvconf.Nameserver(net.ParseIP("8.8.8.9")))
+	ns := resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))
+	conf.Add(ns, resolvconf.NewNameserver(net.ParseIP("8.8.8.9")))
 	conf.Remove(ns)
 	conf.Write(os.Stdout)
 	// Output: nameserver 8.8.8.9
@@ -333,12 +324,11 @@ func Example() {
 	}
 	conf, err := resolvconf.ReadConf(res.Body)
 	res.Body.Close()
-	conf.Remove(resolvconf.Nameserver(net.ParseIP("8.8.4.4")))
-	conf.Add(resolvconf.Domain("foo.bar"), resolvconf.SortlistPair(net.ParseIP("130.155.160.0"), net.ParseIP("255.255.240.0")))
+	conf.Remove(resolvconf.NewNameserver(net.ParseIP("8.8.4.4")))
+	conf.Add(resolvconf.NewDomain("foo.bar"), resolvconf.NewSortlistPair(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.0")))
 	conf.Write(os.Stdout)
 	// Output: domain foo.bar
 	// nameserver 8.8.8.8
 	//
 	// sortlist 130.155.160.0/255.255.240.0
 }
-

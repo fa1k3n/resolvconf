@@ -2,6 +2,7 @@ package resolvconf
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"io"
 	"io/ioutil"
 	"net"
@@ -9,7 +10,7 @@ import (
 	"strings"
 )
 
-func parseOption(o string) (option, error) {
+func parseOption(o string) (Option, error) {
 	keyval := strings.Split(o, ":")
 
 	switch opt := keyval[0]; opt {
@@ -17,68 +18,66 @@ func parseOption(o string) (option, error) {
 		"ip6-bytestring", "ip6-dotint", "no-ip6-dotint",
 		"edns0", "single-request", "single-request-reopen",
 		"no-tld-query", "use-vc":
-		return option{o, -1}, nil
+		return Option{o, -1}, nil
 	case "ndots", "timeout", "attempts":
 		val, err := strconv.Atoi(keyval[1])
 		if err != nil {
-			return option{"", -1}, fmt.Errorf("%s unable to parse option value %s", opt, keyval[1])
+			return Option{"", -1}, fmt.Errorf("%s unable to parse option value %s", opt, keyval[1])
 		}
-		return option{opt, val}, nil
+		return Option{opt, val}, nil
 	default:
-		return option{"", -1}, fmt.Errorf("Unknown option %s", opt)
+		return Option{"", -1}, fmt.Errorf("Unknown option %s", opt)
 	}
 }
 
-func parseLine(line string) (interface{}, error) {
+func parseLine(line string) ([]ConfItem, error) {
 	toks := strings.Fields(line)
+	var items []ConfItem
+	var err error
 	switch keyword := toks[0]; keyword {
 	case "nameserver":
-		var ns nameserver
+		ns := new(Nameserver)
 		if ns.IP = net.ParseIP(toks[1]); ns.IP == nil {
-			return nil, fmt.Errorf("Malformed IP address: %s", toks[1])
+			err = fmt.Errorf("Malformed IP address: %s", toks[1])
+			break
 		}
-		return ns, nil
+		items = append(items, ns)
 	case "domain":
-		return Domain(toks[1]), nil
+		items = append(items, NewDomain(toks[1]))
 	case "search":
-		var doms []searchDomain
 		for _, dom := range toks[1:] {
-			doms = append(doms, SearchDomain(dom))
+			items = append(items, NewSearchDomain(dom))
 		}
-		return search{doms}, nil
 	case "sortlist":
-		var pairs []sortlistpair
-		for i, pair := range toks[1:] {
+		for _, pair := range toks[1:] {
 			var addr, nm net.IP
-			if i == 10 {
-				return sortlist{pairs}, fmt.Errorf("Too long sortlist, 10 is maximum")
-			}
 			addrNmStr := strings.Split(pair, "/")
 			if addr = net.ParseIP(addrNmStr[0]); addr == nil {
-				return nil, fmt.Errorf("Malformed IP address %s in searchlist", pair)
+				err = fmt.Errorf("Malformed IP address %s in searchlist", pair)
+				break
 			}
 			if len(addrNmStr) > 1 {
 				if nm = net.ParseIP(addrNmStr[1]); nm == nil {
-					return nil, fmt.Errorf("Malformed netmask %s in searchlist", pair)
+					err = fmt.Errorf("Malformed netmask %s in searchlist", pair)
+					break
 				}
 			}
-			pairs = append(pairs, SortlistPair(addr, nm))
-
+			items = append(items, NewSortlistPair(addr).SetNetmask(nm))
 		}
-		return sortlist{pairs}, nil
 	case "options":
-		var opts []option
 		for _, optStr := range toks[1:] {
-			opt, err := parseOption(optStr)
-			if err != nil {
-				return nil, err
+			opt, e := parseOption(optStr)
+			if e != nil {
+				err = e
+				break
 			}
-			opts = append(opts, opt)
+			items = append(items, opt)
 		}
-		return opts, nil
 	default:
-		return nil, fmt.Errorf("Unknown keyword %s", keyword)
+		err = fmt.Errorf("Unknown keyword %s", keyword)
 	}
+
+	return items, err
 }
 
 // ReadConf will read a configuration from given io.Reader
@@ -86,12 +85,12 @@ func parseLine(line string) (interface{}, error) {
 // Returns a new Conf object when successful otherwise
 // nil and an error
 func ReadConf(r io.Reader) (*Conf, error) {
-	var storedErr error
-	storedErr = nil
+	var res *multierror.Error
 	conf := New()
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		return conf, err
+		res = multierror.Append(res, err)
+		return nil, res
 	}
 	confFile := strings.TrimSpace(string(b[:]))
 	lines := strings.Split(confFile, "\n")
@@ -103,18 +102,15 @@ func ReadConf(r io.Reader) (*Conf, error) {
 		// Otherwise decode line
 		opt, err := parseLine(line)
 		if err != nil {
-			if opt == nil {
-				// Only if there is an error and no option
-				return conf, err
-			}
-			// Otherwise add this error to stored errors
-			// and continue
-			storedErr = fmt.Errorf("%s\n%s", err, storedErr)
+			res = multierror.Append(res, err)
+			continue
 		}
 
-		if err := conf.Add(opt); err != nil {
-			return conf, err
+		for _, o := range opt {
+			if err := conf.Add(o); err != nil {
+				res = multierror.Append(res, err)
+			}
 		}
 	}
-	return conf, storedErr
+	return conf, res.ErrorOrNil()
 }
