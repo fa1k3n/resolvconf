@@ -18,8 +18,11 @@ import (
 // been setup using the EnableLogging call
 func (conf *Conf) Add(opts ...ConfItem) error {
 	var err *multierror.Error
-
 	for _, o := range opts {
+		if o == nil {
+			err = multierror.Append(err, fmt.Errorf("Trying to add nil element"))
+			continue
+		}
 		if ok, e := o.applyLimits(conf); e != nil {
 			err = multierror.Append(err, e)
 		} else if ok {
@@ -39,6 +42,10 @@ func (conf *Conf) Add(opts ...ConfItem) error {
 func (conf *Conf) Remove(opts ...ConfItem) error {
 	var err *multierror.Error
 	for _, o := range opts {
+		if o == nil {
+			err = multierror.Append(err, fmt.Errorf("Trying to remove nil element"))
+			continue
+		}
 		i := conf.indexOf(o)
 		//_, isdom := o.(Domain)
 		if i == -1 {
@@ -54,12 +61,12 @@ func (conf *Conf) Remove(opts ...ConfItem) error {
 
 // EnableLogging enables internal logging with given writer as output, currently only one
 // writer is supported. conf will use LstdFlags for the logging
-func (conf *Conf) EnableLogging(writer ...io.Writer) error {
+func (conf *Conf) EnableLogging(writer io.Writer) error {
 	if conf.logger == nil {
 		return fmt.Errorf("Logging has not been setup properly")
 	}
 	conf.logger.SetFlags(log.LstdFlags)
-	conf.logger.SetOutput(writer[0])
+	conf.logger.SetOutput(writer)
 	return nil
 }
 

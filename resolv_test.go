@@ -365,6 +365,43 @@ func TestIfFindReturnsPointer(t *testing.T) {
 	ns := conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))).(*resolvconf.Nameserver)
 	ns.IP = net.ParseIP("8.8.8.9")
 	assert.NotNil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.9"))))
+
+	// Try to remove after find
+	err := conf.Remove(conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.9"))))
+	assert.Nil(t, err)
+}
+
+func TestAddNilElements(t *testing.T) {
+	conf := resolvconf.New()
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Add nil element causes panic")
+		}
+	}()
+	conf.Add(nil)
+}
+
+func TestRemoveNilElements(t *testing.T) {
+	conf := resolvconf.New()
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Remove nil element causes panic")
+		}
+	}()
+	conf.Remove(nil)
+}
+
+func TestFindNilElements(t *testing.T) {
+	conf := resolvconf.New()
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Find nil element causes panic")
+		}
+	}()
+	conf.Find(nil)
 }
 
 func ExampleConf_Add() {
