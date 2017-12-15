@@ -63,7 +63,8 @@ func (conf *Conf) EnableLogging(writer ...io.Writer) error {
 	return nil
 }
 
-// Find an configure item returns nil if item is not found
+// Find an configure item returns nil if item is not found. Returned will be
+// a pointer to the actual item that can be converted into expected type
 func (conf Conf) Find(o ConfItem) ConfItem {
 	i := conf.indexOf(o)
 	if i == -1 {
