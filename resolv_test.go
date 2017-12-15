@@ -48,7 +48,7 @@ func TestIPv6Nameserver(t *testing.T) {
 	err := conf.Add(ns)
 	assert.Nil(t, err)
 	assert.NotNil(t, conf.Find(ns))
-	assert.Equal(t, net.ParseIP("2001:0db8:0000:0000:0000:0000:1428:07ab"), (*conf.Find(ns)).(*resolvconf.Nameserver).IP)
+	assert.Equal(t, net.ParseIP("2001:0db8:0000:0000:0000:0000:1428:07ab"), conf.Find(ns).(*resolvconf.Nameserver).IP)
 }
 
 func TestAddSecondDomainReplacesFirst(t *testing.T) {
@@ -275,13 +275,13 @@ func TestThatSortItemWithDifferentNetmaskToSortItemUpdatesItem(t *testing.T) {
 	conf.Add(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.0")))
 	si := conf.Find(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")))
 	assert.NotNil(t, si)
-	assert.Equal(t, net.ParseIP("255.255.240.0"), (*si).(*resolvconf.SortItem).GetNetmask())
+	assert.Equal(t, net.ParseIP("255.255.240.0"), si.(*resolvconf.SortItem).GetNetmask())
 
 	err := conf.Add(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.100")))
 	assert.Nil(t, err)
 	si = conf.Find(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")))
 	assert.NotNil(t, si)
-	assert.Equal(t, net.ParseIP("255.255.240.100"), (*si).(*resolvconf.SortItem).GetNetmask())
+	assert.Equal(t, net.ParseIP("255.255.240.100"), si.(*resolvconf.SortItem).GetNetmask())
 }
 
 func TestSearchDomainLimit(t *testing.T) {
@@ -357,6 +357,14 @@ func TestLogging(t *testing.T) {
 	assert.Contains(t, buf.String(), "Added option debug")
 	conf.Remove(*resolvconf.NewOption("debug"))
 	assert.Contains(t, buf.String(), "Removed option debug")
+}
+
+func TestIfFindReturnsPointer(t *testing.T) {
+	conf := resolvconf.New()
+	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+	ns := conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))).(*resolvconf.Nameserver)
+	ns.IP = net.ParseIP("8.8.8.9")
+	assert.NotNil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.9"))))
 }
 
 func ExampleConf_Add() {

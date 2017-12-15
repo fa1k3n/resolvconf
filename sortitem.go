@@ -26,10 +26,11 @@ func NewSortItem(addr net.IP) *SortItem {
 func (si SortItem) applyLimits(conf *Conf) (bool, error) {
 	if i := conf.Find(si); i != nil {
 		// Check if netmask is different otherwise error
-		if si.Netmask.Equal((*i).(*SortItem).Netmask) {
+		if si.Netmask.Equal(i.(*SortItem).Netmask) {
 			return false, fmt.Errorf("Sortlist pair %s already exists in conf", si)
 		}
-		(*i).(*SortItem).Netmask = si.Netmask
+		index := conf.indexOf(i)
+		conf.items[index].(*SortItem).Netmask = si.Netmask
 	}
 	if len(conf.GetSortItems()) == sortListMaxCount {
 		return false, fmt.Errorf("Too long sortlist, %d is maximum", sortListMaxCount)

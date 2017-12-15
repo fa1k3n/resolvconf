@@ -37,8 +37,9 @@ func (opt Option) applyLimits(conf *Conf) (bool, error) {
 	}
 	if o := conf.Find(opt); o != nil {
 		// If option has a value then update otherwise error
-		if (*o).(*Option).Value != -1 {
-			(*o).(*Option).Value = opt.Value
+		if o.(*Option).Value != -1 {
+			i := conf.indexOf(o)
+			conf.items[i].(*Option).Value = opt.Value
 			return false, nil // Dont add
 		}
 		return false, fmt.Errorf("Option %s is already present", opt)

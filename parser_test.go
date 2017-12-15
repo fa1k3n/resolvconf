@@ -169,7 +169,7 @@ func TestBasicOptions(t *testing.T) {
 	assert.Equal(t, 3, len(conf.GetOptions()))
 	opt := conf.Find(resolvconf.NewOption("ndots"))
 	assert.NotNil(t, opt)
-	assert.Equal(t, 12, (*opt).(*resolvconf.Option).Get())
+	assert.Equal(t, 12, opt.(*resolvconf.Option).Get())
 }
 
 func TestUnknownNewOption(t *testing.T) {

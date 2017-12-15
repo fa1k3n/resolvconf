@@ -64,12 +64,12 @@ func (conf *Conf) EnableLogging(writer ...io.Writer) error {
 }
 
 // Find an configure item returns nil if item is not found
-func (conf Conf) Find(o ConfItem) *ConfItem {
+func (conf Conf) Find(o ConfItem) ConfItem {
 	i := conf.indexOf(o)
 	if i == -1 {
 		return nil
 	}
-	return &conf.items[i]
+	return conf.items[i]
 }
 
 func (conf Conf) indexOf(o ConfItem) int {
