@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -39,6 +40,15 @@ func TestRemoveNonExistingNewNameserver(t *testing.T) {
 	ip := net.ParseIP("8.8.8.8")
 	err := conf.Remove(resolvconf.NewNameserver(ip))
 	assert.NotNil(t, err)
+}
+
+func TestIPv6Nameserver(t *testing.T) {
+	conf := resolvconf.New()
+	ns := resolvconf.NewNameserver(net.ParseIP("2001:0db8:0000:0000:0000:0000:1428:07ab"))
+	err := conf.Add(ns)
+	assert.Nil(t, err)
+	assert.NotNil(t, conf.Find(ns))
+	assert.Equal(t, net.ParseIP("2001:0db8:0000:0000:0000:0000:1428:07ab"), (*conf.Find(ns)).(*resolvconf.Nameserver).IP)
 }
 
 func TestAddSecondDomainReplacesFirst(t *testing.T) {
@@ -238,6 +248,64 @@ func TestVariadicStorlistPair(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.GetSortItems()[0].Address)
 	assert.Equal(t, net.ParseIP("255.255.255.0"), conf.GetSortItems()[0].Netmask)
+}
+
+func TestThatOptionsWithValueUpdatesExistingItems(t *testing.T) {
+	conf := resolvconf.New()
+
+	// Start with ndots, timeout and attempts, e.g. the once that should work
+	for i, opt := range []string{"ndots", "timeout", "attempts"} {
+		conf.Add(resolvconf.NewOption(opt).Set(3))
+		assert.Equal(t, 3, conf.GetOptions()[i].Get())
+		err := conf.Add(resolvconf.NewOption(opt).Set(5))
+		assert.Nil(t, err)
+		assert.Equal(t, 5, conf.GetOptions()[i].Get())
+	}
+
+	// Now test with one that should not work
+	err := conf.Add(resolvconf.NewOption("debug"))
+	assert.Nil(t, err)
+	assert.NotNil(t, conf.Find(resolvconf.NewOption("debug")))
+	err = conf.Add(resolvconf.NewOption("debug"))
+	assert.NotNil(t, err)
+}
+
+func TestThatSortItemWithDifferentNetmaskToSortItemUpdatesItem(t *testing.T) {
+	conf := resolvconf.New()
+	conf.Add(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.0")))
+	si := conf.Find(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")))
+	assert.NotNil(t, si)
+	assert.Equal(t, net.ParseIP("255.255.240.0"), (*si).(*resolvconf.SortItem).GetNetmask())
+
+	err := conf.Add(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.100")))
+	assert.Nil(t, err)
+	si = conf.Find(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")))
+	assert.NotNil(t, si)
+	assert.Equal(t, net.ParseIP("255.255.240.100"), (*si).(*resolvconf.SortItem).GetNetmask())
+}
+
+func TestSearchDomainLimit(t *testing.T) {
+	conf := resolvconf.New()
+	for i := 0; i < 6; i++ {
+		err := conf.Add(resolvconf.NewSearchDomain("foo.bar" + strconv.Itoa(i)))
+		assert.Nil(t, err)
+	}
+	// Too many SearchDomain
+	err := conf.Add(resolvconf.NewSearchDomain("foo.bar7"))
+	assert.NotNil(t, err)
+}
+
+func TestSearchDomainCharLimit(t *testing.T) {
+	conf := resolvconf.New()
+	var dom string
+	for i := 0; i < 256; i++ {
+		dom = dom + "1"
+	}
+	err := conf.Add(resolvconf.NewSearchDomain(dom))
+	assert.Nil(t, err)
+	// Adding one more should break maximum number of chars limit
+	err = conf.Add(resolvconf.NewSearchDomain("2"))
+	assert.NotNil(t, err)
 }
 
 func TestLogging(t *testing.T) {

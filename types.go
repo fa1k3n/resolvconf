@@ -5,6 +5,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"unicode/utf8"
+)
+
+// Limits
+const (
+	searchDomainMaxCount     = 6   // Maximum count of search domains
+	searchDomainMaxCharCount = 256 // Maximum total number of chars in search domains
+	nameserversMaxCount      = 3   // Maximum number of nameservers
+	sortListMaxCount         = 10  // Maximum number of items in sortlist
 )
 
 // Conf represents a configuration object
@@ -82,8 +91,8 @@ type Nameserver struct {
 
 func (ns Nameserver) applyLimits(conf *Conf) (bool, error) {
 
-	if len(conf.GetNameservers())+1 > 3 {
-		return false, fmt.Errorf("Too many Nameserver configs, max is 3")
+	if len(conf.GetNameservers()) == nameserversMaxCount {
+		return false, fmt.Errorf("Too many Nameserver configs, max is %d", nameserversMaxCount)
 	}
 	// Search if conf Nameserver is already added
 	if conf.Find(ns) != nil {
@@ -144,6 +153,20 @@ func (sd SearchDomain) applyLimits(conf *Conf) (bool, error) {
 	if conf.Find(sd) != nil {
 		return false, fmt.Errorf("Search domain %s already exists in conf", sd.Name)
 	}
+	// Check max limit
+	doms := conf.GetSearchDomains()
+	if len(doms) == searchDomainMaxCount {
+		return false, fmt.Errorf("Too many search domains, %d is maximum", searchDomainMaxCount)
+	}
+	// Check max char count limit
+	var charcount int
+	for _, str := range doms {
+		charcount += utf8.RuneCountInString(str.Name)
+	}
+	if charcount+utf8.RuneCountInString(sd.Name) > searchDomainMaxCharCount {
+		return false, fmt.Errorf("Too many charactes is search domain list, %d is maximum", searchDomainMaxCharCount)
+	}
+
 	return true, nil
 }
 
@@ -168,10 +191,14 @@ type SortItem struct {
 
 func (si SortItem) applyLimits(conf *Conf) (bool, error) {
 	if i := conf.Find(si); i != nil {
-		return false, fmt.Errorf("Sortlist pair %s already exists in conf", si)
+		// Check if netmask is different otherwise error
+		if si.Netmask.Equal((*i).(*SortItem).Netmask) {
+			return false, fmt.Errorf("Sortlist pair %s already exists in conf", si)
+		}
+		(*i).(*SortItem).Netmask = si.Netmask
 	}
-	if len(conf.GetSortItems()) == 10 {
-		return false, fmt.Errorf("Too long sortlist, 10 is maximum")
+	if len(conf.GetSortItems()) == sortListMaxCount {
+		return false, fmt.Errorf("Too long sortlist, %d is maximum", sortListMaxCount)
 	}
 	return true, nil
 }
@@ -218,6 +245,11 @@ func (opt Option) applyLimits(conf *Conf) (bool, error) {
 		return false, fmt.Errorf("Unknown option %s", opt)
 	}
 	if o := conf.Find(opt); o != nil {
+		// If option has a value then update otherwise error
+		if (*o).(*Option).Value != -1 {
+			(*o).(*Option).Value = opt.Value
+			return false, nil // Dont add
+		}
 		return false, fmt.Errorf("Option %s is already present", opt)
 	}
 	return true, nil
