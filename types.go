@@ -13,8 +13,8 @@ type Conf struct {
 	logger *log.Logger
 }
 
-// Nameservers returns a list of all added nameservers
-func (conf *Conf) Nameservers() []Nameserver {
+// GetNameservers returns a list of all added nameservers
+func (conf *Conf) GetNameservers() []Nameserver {
 	var ret []Nameserver
 	for _, item := range conf.items {
 		if _, ok := item.(*Nameserver); ok {
@@ -24,8 +24,8 @@ func (conf *Conf) Nameservers() []Nameserver {
 	return ret
 }
 
-// Sortlist returns list of all added sortitems
-func (conf *Conf) Sortlist() []SortItem {
+// GetSortItems returns list of all added sortitems
+func (conf *Conf) GetSortItems() []SortItem {
 	var ret []SortItem
 	for _, item := range conf.items {
 		if _, ok := item.(*SortItem); ok {
@@ -35,8 +35,8 @@ func (conf *Conf) Sortlist() []SortItem {
 	return ret
 }
 
-// Domain returns current domain
-func (conf *Conf) Domain() Domain {
+// GetDomain returns current domain
+func (conf *Conf) GetDomain() Domain {
 	for _, item := range conf.items {
 		if d, ok := item.(*Domain); ok {
 			return *d
@@ -45,8 +45,8 @@ func (conf *Conf) Domain() Domain {
 	return Domain{}
 }
 
-// Search returns a list of all added SearchDomains
-func (conf *Conf) Search() []SearchDomain {
+// GetSearchDomains returns a list of all added SearchDomains
+func (conf *Conf) GetSearchDomains() []SearchDomain {
 	var ret []SearchDomain
 	for _, item := range conf.items {
 		if _, ok := item.(*SearchDomain); ok {
@@ -56,8 +56,8 @@ func (conf *Conf) Search() []SearchDomain {
 	return ret
 }
 
-// Options returns a list of all added options
-func (conf *Conf) Options() []Option {
+// GetOptions returns a list of all added options
+func (conf *Conf) GetOptions() []Option {
 	var ret []Option
 	for _, item := range conf.items {
 		if _, ok := item.(*Option); ok {
@@ -82,7 +82,7 @@ type Nameserver struct {
 
 func (ns Nameserver) applyLimits(conf *Conf) (bool, error) {
 
-	if len(conf.Nameservers())+1 > 3 {
+	if len(conf.GetNameservers())+1 > 3 {
 		return false, fmt.Errorf("Too many Nameserver configs, max is 3")
 	}
 	// Search if conf Nameserver is already added
@@ -111,8 +111,7 @@ type Domain struct {
 }
 
 func (dom Domain) applyLimits(conf *Conf) (bool, error) {
-	//conf.logger.Printf("Added domain %s", dom.Name)
-	i := conf.indexOf(conf.Domain())
+	i := conf.indexOf(conf.GetDomain())
 	if i != -1 {
 		// Found it, update and return not ok to add
 		conf.items[i] = &Domain{dom.Name}
@@ -171,7 +170,7 @@ func (si SortItem) applyLimits(conf *Conf) (bool, error) {
 	if i := conf.Find(si); i != nil {
 		return false, fmt.Errorf("Sortlist pair %s already exists in conf", si)
 	}
-	if len(conf.Sortlist()) == 10 {
+	if len(conf.GetSortItems()) == 10 {
 		return false, fmt.Errorf("Too long sortlist, 10 is maximum")
 	}
 	return true, nil

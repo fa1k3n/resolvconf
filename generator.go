@@ -6,11 +6,11 @@ import (
 )
 
 var templates = map[string]string{
-	"domain":     "{{if .Domain.Name}}domain {{ .Domain.Name }}\n{{end}}",
-	"Nameserver": "{{if .Nameservers}}{{range $nameserver := .Nameservers}}nameserver {{$nameserver.IP}}\n{{end}}\n{{end}}",
-	"options":    "{{if .Options}}options{{range $opt := .Options}} {{$opt}}{{end}}\n\n{{end}}",
-	"sortlist":   "{{if .Sortlist}}sortlist{{range $pair := .Sortlist}} {{$pair}}{{end}}\n\n{{end}}",
-	"search":     "{{if .Search}}search{{range $dom := .Search}} {{$dom.Name}}{{end}}\n\n{{end}}",
+	"domain":     "{{if .GetDomain.Name}}domain {{ .GetDomain.Name }}\n{{end}}",
+	"Nameserver": "{{if .GetNameservers}}{{range $nameserver := .GetNameservers}}nameserver {{$nameserver.IP}}\n{{end}}\n{{end}}",
+	"options":    "{{if .GetOptions}}options{{range $opt := .GetOptions}} {{$opt}}{{end}}\n\n{{end}}",
+	"sortlist":   "{{if .GetSortItems}}sortlist{{range $pair := .GetSortItems}} {{$pair}}{{end}}\n\n{{end}}",
+	"search":     "{{if .GetSearchDomains}}search{{range $dom := .GetSearchDomains}} {{$dom.Name}}{{end}}\n\n{{end}}",
 }
 
 // Write configuration to an io.Writer

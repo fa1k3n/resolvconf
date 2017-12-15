@@ -83,28 +83,28 @@ func TestCommentsAndBlankLinesAreSkipped(t *testing.T) {
 func TestReadDomain(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("domain foo.com"))
 	assert.Nil(t, err)
-	assert.Equal(t, "foo.com", conf.Domain().Name)
+	assert.Equal(t, "foo.com", conf.GetDomain().Name)
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("domain     foo.com"))
 	assert.Nil(t, err)
-	assert.Equal(t, "foo.com", conf.Domain().Name)
+	assert.Equal(t, "foo.com", conf.GetDomain().Name)
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("    domain     foo.com"))
 	assert.Nil(t, err)
-	assert.Equal(t, "foo.com", conf.Domain().Name)
+	assert.Equal(t, "foo.com", conf.GetDomain().Name)
 }
 
 func TestReadSearch(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("search foo.com"))
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(conf.Search()))
+	assert.Equal(t, 1, len(conf.GetSearchDomains()))
 	assert.NotNil(t, conf.Find(resolvconf.NewSearchDomain("foo.com")))
 }
 
 func TestReadMultiSearch(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("search foo.com bar.com     baz.com"))
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(conf.Search()))
+	assert.Equal(t, 3, len(conf.GetSearchDomains()))
 	for _, dom := range []string{"foo.com", "bar.com", "baz.com"} {
 		assert.NotNil(t, conf.Find(resolvconf.NewSearchDomain(dom)))
 	}
@@ -113,20 +113,20 @@ func TestReadMultiSearch(t *testing.T) {
 func TestReadSortlist(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0"))
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(conf.Sortlist()))
+	assert.Equal(t, 1, len(conf.GetSortItems()))
 	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.160.0"))))
 }
 
 func TestReadSortlistFaultyAddress(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Sortlist()))
+	assert.Equal(t, 0, len(conf.GetSortItems()))
 }
 
 func TestReadMultiSortlist(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0 130.155.0.0"))
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(conf.Sortlist()))
+	assert.Equal(t, 2, len(conf.GetSortItems()))
 	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.160.0"))))
 	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.0.0"))))
 }
@@ -134,14 +134,14 @@ func TestReadMultiSortlist(t *testing.T) {
 func TestReadSortlistWithNetmask(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0/255.255.240.0"))
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(conf.Sortlist()))
+	assert.Equal(t, 1, len(conf.GetSortItems()))
 	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.160.0"))))
 }
 
 func TestReadSortlistWithBadNetmask(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0/255.255.240"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Sortlist()))
+	assert.Equal(t, 0, len(conf.GetSortItems()))
 }
 
 func TestMaxTenSortlistPairsMayBeDefined(t *testing.T) {
@@ -150,23 +150,23 @@ func TestMaxTenSortlistPairsMayBeDefined(t *testing.T) {
 		"1.1.1.7 1.1.1.8 1.1.1.9 1.1.1.10"
 	conf, err := resolvconf.ReadConf(strings.NewReader(conf_str))
 	assert.NotNil(t, err)
-	assert.Equal(t, 10, len(conf.Sortlist()))
+	assert.Equal(t, 10, len(conf.GetSortItems()))
 }
 
 func TestBasicOptions(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("options debug"))
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(conf.Options()))
+	assert.Equal(t, 1, len(conf.GetOptions()))
 	assert.NotNil(t, conf.Find(resolvconf.NewOption("debug")))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("options debug rotate"))
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(conf.Options()))
+	assert.Equal(t, 2, len(conf.GetOptions()))
 	assert.NotNil(t, conf.Find(*resolvconf.NewOption("rotate")))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("options debug rotate ndots:12"))
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(conf.Options()))
+	assert.Equal(t, 3, len(conf.GetOptions()))
 	opt := conf.Find(resolvconf.NewOption("ndots"))
 	assert.NotNil(t, opt)
 	assert.Equal(t, 12, (*opt).(*resolvconf.Option).Get())
@@ -175,17 +175,17 @@ func TestBasicOptions(t *testing.T) {
 func TestUnknownNewOption(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("options foo"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Options()))
+	assert.Equal(t, 0, len(conf.GetOptions()))
 }
 
 func TestBadNewOption(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("options ndots:"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Options()))
+	assert.Equal(t, 0, len(conf.GetOptions()))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("options ndots:foos"))
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, len(conf.Options()))
+	assert.Equal(t, 0, len(conf.GetOptions()))
 }
 
 func TestAllOptions(t *testing.T) {
@@ -195,5 +195,5 @@ func TestAllOptions(t *testing.T) {
 		"no-tld-query use-vc"
 	conf, err := resolvconf.ReadConf(strings.NewReader(conf_str))
 	assert.Nil(t, err)
-	assert.Equal(t, 15, len(conf.Options()))
+	assert.Equal(t, 15, len(conf.GetOptions()))
 }
