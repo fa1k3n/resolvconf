@@ -57,7 +57,8 @@ func TestDomainGeneration(t *testing.T) {
 func TestOptionsGeneration(t *testing.T) {
 	conf := resolvconf.New()
 	dbg := resolvconf.NewOption("debug")
-	conf.Add(dbg)
+	err := conf.Add(dbg)
+	assert.Nil(t, err)
 	str, err := GetConf(conf)
 	assert.Nil(t, err)
 	assert.Contains(t, str, "options debug")
@@ -83,13 +84,13 @@ func TestOptionsGeneration(t *testing.T) {
 
 func TestSortlistGeneration(t *testing.T) {
 	conf := resolvconf.New()
-	addr1 := resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0"))
+	addr1 := resolvconf.NewSortItem(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0"))
 	conf.Add(addr1)
 	str, err := GetConf(conf)
 	assert.Nil(t, err)
 	assert.Contains(t, str, "sortlist 8.8.8.8/255.255.255.0")
 
-	addr2 := resolvconf.NewSortlistPair(net.ParseIP("8.8.8.7"))
+	addr2 := resolvconf.NewSortItem(net.ParseIP("8.8.8.7"))
 	conf.Remove(*addr1)
 	conf.Add(addr2)
 	str, err = GetConf(conf)

@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"reflect"
 )
 
 // Conf represents a configuration object
@@ -14,50 +13,55 @@ type Conf struct {
 	logger *log.Logger
 }
 
+// Nameservers returns a list of all added nameservers
 func (conf *Conf) Nameservers() []Nameserver {
 	var ret []Nameserver
 	for _, item := range conf.items {
-		if reflect.TypeOf(item).Name() == "Nameserver" {
-			ret = append(ret, item.(Nameserver))
+		if _, ok := item.(*Nameserver); ok {
+			ret = append(ret, *item.(*Nameserver))
 		}
 	}
 	return ret
 }
 
-func (conf *Conf) Sortlist() []SortlistPair {
-	var ret []SortlistPair
+// Sortlist returns list of all added sortitems
+func (conf *Conf) Sortlist() []SortItem {
+	var ret []SortItem
 	for _, item := range conf.items {
-		if reflect.TypeOf(item).Name() == "SortlistPair" {
-			ret = append(ret, item.(SortlistPair))
+		if _, ok := item.(*SortItem); ok {
+			ret = append(ret, *item.(*SortItem))
 		}
 	}
 	return ret
 }
 
+// Domain returns current domain
 func (conf *Conf) Domain() Domain {
-	for _, item := range conf.items {
-		if reflect.TypeOf(item).Name() == "Domain" {
-			return item.(Domain)
+	for _, item := range conf.items {	
+		if d, ok := item.(*Domain); ok {
+			return *d
 		}
 	}
 	return Domain{}
 }
 
+// Search returns a list of all added SearchDomains
 func (conf *Conf) Search() []SearchDomain {
 	var ret []SearchDomain
 	for _, item := range conf.items {
-		if reflect.TypeOf(item).Name() == "SearchDomain" {
-			ret = append(ret, item.(SearchDomain))
+		if _, ok := item.(*SearchDomain); ok {
+			ret = append(ret, *item.(*SearchDomain))
 		}
 	}
 	return ret
 }
 
+// Options returns a list of all added options
 func (conf *Conf) Options() []Option {
 	var ret []Option
 	for _, item := range conf.items {
-		if reflect.TypeOf(item).Name() == "Option" {
-			ret = append(ret, item.(Option))
+		if _, ok := item.(*Option); ok {			
+			ret = append(ret, *item.(*Option))
 		}
 	}
 	return ret
@@ -65,7 +69,7 @@ func (conf *Conf) Options() []Option {
 
 type ConfItem interface {
 	fmt.Stringer
-	AddToConf(conf *Conf) error
+	applyLimits(conf *Conf) (bool, error)
 	Equal(b ConfItem) bool
 }
 
@@ -73,23 +77,22 @@ type Nameserver struct {
 	IP net.IP
 }
 
-func (ns Nameserver) AddToConf(conf *Conf) error {
+func (ns Nameserver) applyLimits(conf *Conf) (bool, error) {
 
 	if len(conf.Nameservers())+1 > 3 {
-		return fmt.Errorf("Too many Nameserver configs, max is 3")
+		return false, fmt.Errorf("Too many Nameserver configs, max is 3")
 	}
 	// Search if conf Nameserver is already added
-	if conf.Find(ConfItem(ns)) != nil {
-		return fmt.Errorf("Nameserver %s already exists in conf", ns.IP)
+	if conf.Find(ns) != nil {
+		return false, fmt.Errorf("Nameserver %s already exists in conf", ns.IP)
 	}
-	conf.logger.Printf("Added Nameserver %s", ns.IP)
-	conf.items = append(conf.items, ns)
-	return nil
+
+	return true, nil
 }
 
 func (ns Nameserver) Equal(b ConfItem) bool {
-	if item, ok := b.(Nameserver); ok {
-		return ns.IP.String() == item.IP.String()
+	if item, ok := b.(*Nameserver); ok {
+		return ns.IP.Equal(item.IP)
 	}
 	return false
 }
@@ -102,15 +105,17 @@ type Domain struct {
 	Name string
 }
 
-func (dom Domain) AddToConf(conf *Conf) error {
-	conf.logger.Printf("Added domain %s", dom.Name)
+func (dom Domain) applyLimits(conf *Conf) (bool, error) {
+	//conf.logger.Printf("Added domain %s", dom.Name)
 	i := conf.indexOf(conf.Domain())
 	if i != -1 {
-		conf.items[i] = dom
-	} else {
-		conf.items = append(conf.items, dom)
+		// Found it, update and return not ok to add
+		conf.items[i] = &Domain{dom.Name}
+		return false, nil
 	}
-	return nil
+
+	// Ok to add
+	return true, nil
 }
 
 func (dom Domain) String() string {
@@ -118,7 +123,7 @@ func (dom Domain) String() string {
 }
 
 func (dom Domain) Equal(b ConfItem) bool {
-	if item, ok := b.(Domain); ok {
+	if item, ok := b.(*Domain); ok {
 		return dom.Name == item.Name
 	}
 	return false
@@ -128,14 +133,12 @@ type SearchDomain struct {
 	Name string
 }
 
-func (sd SearchDomain) AddToConf(conf *Conf) error {
+func (sd SearchDomain) applyLimits(conf *Conf) (bool, error) {
 	// Search if conf search domain is already added
 	if conf.Find(sd) != nil {
-		return fmt.Errorf("Search domain %s already exists in conf", sd.Name)
+		return false, fmt.Errorf("Search domain %s already exists in conf", sd.Name)
 	}
-	conf.logger.Printf("Added search domain %s", sd.Name)
-	conf.items = append(conf.items, sd)
-	return nil
+	return true, nil
 }
 
 func (sd SearchDomain) String() string {
@@ -143,47 +146,45 @@ func (sd SearchDomain) String() string {
 }
 
 func (sd SearchDomain) Equal(b ConfItem) bool {
-	if item, ok := b.(SearchDomain); ok {
+	if item, ok := b.(*SearchDomain); ok {
 		return sd.Name == item.Name
 	}
 	return false
 }
 
-type SortlistPair struct {
+type SortItem struct {
 	Address net.IP
 	Netmask net.IP
 }
 
-func (pair SortlistPair) AddToConf(conf *Conf) error {
-	if i := conf.Find(pair); i != nil {
-		return fmt.Errorf("Sortlist pair %s already exists in conf", pair)
+func (item SortItem) applyLimits(conf *Conf) (bool, error) {
+	if i := conf.Find(item); i != nil {
+		return false, fmt.Errorf("Sortlist pair %s already exists in conf", item)
 	}
 	if len(conf.Sortlist()) == 10 {
-		return fmt.Errorf("Too long sortlist, 10 is maximum")
+		return false, fmt.Errorf("Too long sortlist, 10 is maximum")
 	}
-	conf.logger.Printf("Added sortlist pair %s", pair)
-	conf.items = append(conf.items, pair)
-	return nil
+	return true, nil
 }
 
-func (slp SortlistPair) Equal(b ConfItem) bool {
-	if item, ok := b.(SortlistPair); ok {
+func (slp SortItem) Equal(b ConfItem) bool {
+	if item, ok := b.(*SortItem); ok {
 		return slp.Address.String() == item.Address.String()
 	}
 
 	return false
 }
 
-func (slp *SortlistPair) SetNetmask(nm net.IP) *SortlistPair {
+func (slp *SortItem) SetNetmask(nm net.IP) *SortItem {
 	slp.Netmask = nm
 	return slp
 }
 
-func (slp SortlistPair) GetNetmask() net.IP {
+func (slp SortItem) GetNetmask() net.IP {
 	return slp.Netmask
 }
 
-func (s SortlistPair) String() string {
+func (s SortItem) String() string {
 	if len(s.Netmask) > 0 {
 		return fmt.Sprintf("%s/%s", s.Address, s.Netmask)
 	}
@@ -195,23 +196,21 @@ type Option struct {
 	Value int
 }
 
-func (opt Option) AddToConf(conf *Conf) error {
+func (opt Option) applyLimits(conf *Conf) (bool, error) {
 	if opt.Type == "ndots" && opt.Value < 0 {
-		return fmt.Errorf("Bad value %d", opt.Value)
+		return false, fmt.Errorf("Bad value %d", opt.Value)
 	}
 	if _, e := parseOption(opt.String()); e != nil {
-		return fmt.Errorf("Unknown option %s", opt)
+		return false, fmt.Errorf("Unknown option %s", opt)
 	}
 	if o := conf.Find(opt); o != nil {
-		return fmt.Errorf("Option %s is already present")
+		return false, fmt.Errorf("Option %s is already present", opt)
 	}
-	conf.logger.Printf("Added option %s", opt)
-	conf.items = append(conf.items, opt)
-	return nil
+	return true, nil
 }
 
 func (opt Option) Equal(b ConfItem) bool {
-	if o, ok := b.(Option); ok {
+	if o, ok := b.(*Option); ok {
 		return opt.Type == o.Type
 	}
 	return false
@@ -230,10 +229,16 @@ func (opt Option) Get() int {
 }
 
 func (o Option) String() string {
-	if o.Value == -1 {
-		return fmt.Sprintf("%s", o.Type)
+	switch (o.Type) {
+	case "debug", "rotate", "no-check-names", "inet6",
+		"ip6-bytestring", "ip6-dotint", "no-ip6-dotint",
+		"edns0", "single-request", "single-request-reopen",
+		"no-tld-query", "use-vc":
+			return fmt.Sprintf("%s", o.Type)
+	case "ndots", "timeout", "attempts":
+			return fmt.Sprintf("%s:%d", o.Type, o.Value)
 	}
-	return fmt.Sprintf("%s:%d", o.Type, o.Value)
+	return ""
 }
 
 // New creates a new configuration
@@ -260,19 +265,13 @@ func NewSearchDomain(dom string) *SearchDomain {
 	return &SearchDomain{dom}
 }
 
-// SortlistPair creates a new sortlist that will be added to the
+// SortItem creates a new sortlist that will be added to the
 // 'sort' item in the resolv.conf file.
 // If mask is given the output will be IP/mask e.g.
 // 8.8.8.8/255.255.255.0 otherwise output will be
 // IP only, e.g. 8.8.8.8
-func NewSortlistPair(addr net.IP) *SortlistPair {
-	/*if len(mask) > 1 {
-		return SortlistPair{nil, nil}
-	} else if len(mask) == 0 {
-		return SortlistPair{addr, nil}
-	}
-	return SortlistPair{addr, mask[0]}*/
-	slp := new(SortlistPair)
+func NewSortItem(addr net.IP) *SortItem {
+	slp := new(SortItem)
 	slp.Address = addr
 	return slp
 }
@@ -287,9 +286,9 @@ func NewOption(t string) *Option {
 	opt.Type = t
 	opt.Value = -1
 
-	//if _, err := parseOption(opt.String()); err != nil {
-	//	return Option{"", -1}
-	//}
+	if _, err := parseOption(opt.String()); err != nil {
+		return nil
+	}
 
 	return opt
 }

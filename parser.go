@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func parseOption(o string) (Option, error) {
+func parseOption(o string) (*Option, error) {
 	keyval := strings.Split(o, ":")
 
 	switch opt := keyval[0]; opt {
@@ -18,15 +18,15 @@ func parseOption(o string) (Option, error) {
 		"ip6-bytestring", "ip6-dotint", "no-ip6-dotint",
 		"edns0", "single-request", "single-request-reopen",
 		"no-tld-query", "use-vc":
-		return Option{o, -1}, nil
+		return &Option{o, -1}, nil
 	case "ndots", "timeout", "attempts":
 		val, err := strconv.Atoi(keyval[1])
 		if err != nil {
-			return Option{"", -1}, fmt.Errorf("%s unable to parse option value %s", opt, keyval[1])
+			return nil, fmt.Errorf("%s unable to parse option value %s", opt, keyval[1])
 		}
-		return Option{opt, val}, nil
+		return &Option{opt, val}, nil
 	default:
-		return Option{"", -1}, fmt.Errorf("Unknown option %s", opt)
+		return nil, fmt.Errorf("Unknown option %s", opt)
 	}
 }
 
@@ -62,7 +62,7 @@ func parseLine(line string) ([]ConfItem, error) {
 					break
 				}
 			}
-			items = append(items, NewSortlistPair(addr).SetNetmask(nm))
+			items = append(items, NewSortItem(addr).SetNetmask(nm))
 		}
 	case "options":
 		for _, optStr := range toks[1:] {

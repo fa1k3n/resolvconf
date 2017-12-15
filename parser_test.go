@@ -114,7 +114,7 @@ func TestReadSortlist(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0"))
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(conf.Sortlist()))
-	assert.NotNil(t, conf.Find(*resolvconf.NewSortlistPair(net.ParseIP("130.155.160.0"))))
+	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.160.0"))))
 }
 
 func TestReadSortlistFaultyAddress(t *testing.T) {
@@ -127,15 +127,15 @@ func TestReadMultiSortlist(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0 130.155.0.0"))
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(conf.Sortlist()))
-	assert.NotNil(t, conf.Find(*resolvconf.NewSortlistPair(net.ParseIP("130.155.160.0"))))
-	assert.NotNil(t, conf.Find(*resolvconf.NewSortlistPair(net.ParseIP("130.155.0.0"))))
+	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.160.0"))))
+	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.0.0"))))
 }
 
 func TestReadSortlistWithNetmask(t *testing.T) {
 	conf, err := resolvconf.ReadConf(strings.NewReader("sortlist 130.155.160.0/255.255.240.0"))
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(conf.Sortlist()))
-	assert.NotNil(t, conf.Find(*resolvconf.NewSortlistPair(net.ParseIP("130.155.160.0"))))
+	assert.NotNil(t, conf.Find(*resolvconf.NewSortItem(net.ParseIP("130.155.160.0"))))
 }
 
 func TestReadSortlistWithBadNetmask(t *testing.T) {
@@ -169,7 +169,7 @@ func TestBasicOptions(t *testing.T) {
 	assert.Equal(t, 3, len(conf.Options()))
 	opt := conf.Find(resolvconf.NewOption("ndots"))
 	assert.NotNil(t, opt)
-	assert.Equal(t, 12, (*opt).(resolvconf.Option).Get())
+	assert.Equal(t, 12, (*opt).(*resolvconf.Option).Get())
 }
 
 func TestUnknownNewOption(t *testing.T) {

@@ -19,10 +19,14 @@ import (
 func (conf *Conf) Add(opts ...ConfItem) error {
 	var err *multierror.Error
 
-	for _, o := range opts {
-		if e := o.AddToConf(conf); e != nil {
+	for _, o := range opts {		
+		if ok, e := o.applyLimits(conf); e != nil {
 			err = multierror.Append(err, e)
-		}
+		} else if ok {
+			typeName := reflect.TypeOf(o).Elem().Name()
+			conf.logger.Printf("Added %s %s", strings.ToLower(typeName), o)
+			conf.items = append(conf.items, o)
+		} 
 	}
 	return err.ErrorOrNil()
 }
@@ -41,7 +45,7 @@ func (conf *Conf) Remove(opts ...ConfItem) error {
 			err = multierror.Append(err, fmt.Errorf("Not found"))
 			continue
 		}
-		typeName := reflect.TypeOf(conf.items[i]).Name()
+		typeName := reflect.TypeOf(conf.items[i]).Elem().Name()
 		conf.logger.Printf("Removed %s %s", strings.ToLower(typeName), conf.items[i])
 		conf.items = append(conf.items[:i], conf.items[i+1:]...)
 	}

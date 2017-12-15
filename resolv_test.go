@@ -87,7 +87,7 @@ func TestBasicSearchDomain(t *testing.T) {
 
 func TestBasicSortlist(t *testing.T) {
 	conf := resolvconf.New()
-	sp := resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0"))
+	sp := resolvconf.NewSortItem(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0"))
 
 	// Add a pair
 	err := conf.Add(sp)
@@ -96,7 +96,7 @@ func TestBasicSortlist(t *testing.T) {
 	assert.Equal(t, sp.Netmask.String(), conf.Sortlist()[0].Netmask.String())
 
 	// Check if pair exists
-	assert.NotNil(t, conf.Find(*sp))
+	assert.NotNil(t, conf.Find(sp))
 
 	// Add pair again should yield error
 	err = conf.Add(sp)
@@ -104,7 +104,7 @@ func TestBasicSortlist(t *testing.T) {
 	assert.Equal(t, 1, len(conf.Sortlist()))
 
 	// Remove sortlist pair
-	err = conf.Remove(*sp)
+	err = conf.Remove(sp)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(conf.Sortlist()))
 
@@ -132,9 +132,8 @@ func TestNewOption(t *testing.T) {
 	assert.NotEqual(t, -3, opt.Value)
 
 	// Unknown option
-	//opt = resolvconf.NewOption("foo")
-	//assert.Equal(t, "foo", opt.Type)
-	//assert.Equal(t, -1, opt.Value)
+	opt = resolvconf.NewOption("foo")
+	assert.Nil(t, opt)
 }
 
 func TestBasicNewOption(t *testing.T) {
@@ -148,7 +147,7 @@ func TestBasicNewOption(t *testing.T) {
 	assert.Equal(t, 1, len(conf.Options()))
 
 	// Test if option is set
-	o := conf.Find(*opt)
+	o := conf.Find(opt)
 	assert.NotNil(t, o)
 
 	// Test to set option again should yiled error
@@ -157,7 +156,7 @@ func TestBasicNewOption(t *testing.T) {
 	assert.Equal(t, 1, len(conf.Options()))
 
 	// Test to remove option
-	err = conf.Remove(*opt)
+	err = conf.Remove(opt)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(conf.Options()))
 
@@ -229,13 +228,13 @@ func TestRemoveMultipleItems(t *testing.T) {
 
 func TestVariadicStorlistPair(t *testing.T) {
 	conf := resolvconf.New()
-	err := conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
+	err := conf.Add(resolvconf.NewSortItem(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
 	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist()[0].Address)
 	assert.Equal(t, net.ParseIP(""), conf.Sortlist()[0].Netmask)
 
 	conf = resolvconf.New()
-	err = conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0")))
+	err = conf.Add(resolvconf.NewSortItem(net.ParseIP("8.8.8.8")).SetNetmask(net.ParseIP("255.255.255.0")))
 	assert.Nil(t, err)
 	assert.Equal(t, net.ParseIP("8.8.8.8"), conf.Sortlist()[0].Address)
 	assert.Equal(t, net.ParseIP("255.255.255.0"), conf.Sortlist()[0].Netmask)
@@ -248,7 +247,7 @@ func TestLogging(t *testing.T) {
 	buf := new(bytes.Buffer)
 	err := conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
-	assert.NotContains(t, buf.String(), fmt.Sprintf("Added Nameserver %s", net.ParseIP("8.8.8.8")))
+	assert.NotContains(t, buf.String(), fmt.Sprintf("Added nameserver %s", net.ParseIP("8.8.8.8")))
 
 	// Enable logging, test add Nameserver
 	conf = resolvconf.New()
@@ -256,7 +255,7 @@ func TestLogging(t *testing.T) {
 	conf.EnableLogging(buf)
 	assert.Nil(t, err)
 	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
-	assert.Contains(t, buf.String(), fmt.Sprintf("Added Nameserver %s", net.ParseIP("8.8.8.8")))
+	assert.Contains(t, buf.String(), fmt.Sprintf("Added nameserver %s", net.ParseIP("8.8.8.8")))
 
 	// Enable logging, test remove Nameserver
 	buf.Reset()
@@ -273,16 +272,16 @@ func TestLogging(t *testing.T) {
 	// Add & remove search domain
 	buf.Reset()
 	conf.Add(resolvconf.NewSearchDomain("foo.bar"))
-	assert.Contains(t, buf.String(), "Added search domain foo.bar")
+	assert.Contains(t, buf.String(), "Added searchdomain foo.bar")
 	conf.Remove(resolvconf.NewSearchDomain("foo.bar"))
 	assert.Contains(t, buf.String(), "Removed searchdomain foo.bar")
 
 	// Add & remove sort list pair
 	buf.Reset()
-	conf.Add(resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
-	assert.Contains(t, buf.String(), "Added sortlist pair 8.8.8.8")
-	conf.Remove(*resolvconf.NewSortlistPair(net.ParseIP("8.8.8.8")))
-	assert.Contains(t, buf.String(), "Removed sortlistpair 8.8.8.8")
+	conf.Add(resolvconf.NewSortItem(net.ParseIP("8.8.8.8")))
+	assert.Contains(t, buf.String(), "Added sortitem 8.8.8.8")
+	conf.Remove(*resolvconf.NewSortItem(net.ParseIP("8.8.8.8")))
+	assert.Contains(t, buf.String(), "Removed sortitem 8.8.8.8")
 
 	// Add & remove option
 	buf.Reset()
@@ -325,7 +324,7 @@ func Example() {
 	conf, err := resolvconf.ReadConf(res.Body)
 	res.Body.Close()
 	conf.Remove(resolvconf.NewNameserver(net.ParseIP("8.8.4.4")))
-	conf.Add(resolvconf.NewDomain("foo.bar"), resolvconf.NewSortlistPair(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.0")))
+	conf.Add(resolvconf.NewDomain("foo.bar"), resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.0")))
 	conf.Write(os.Stdout)
 	// Output: domain foo.bar
 	// nameserver 8.8.8.8
