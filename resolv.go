@@ -19,14 +19,14 @@ import (
 func (conf *Conf) Add(opts ...ConfItem) error {
 	var err *multierror.Error
 
-	for _, o := range opts {		
+	for _, o := range opts {
 		if ok, e := o.applyLimits(conf); e != nil {
 			err = multierror.Append(err, e)
 		} else if ok {
 			typeName := reflect.TypeOf(o).Elem().Name()
 			conf.logger.Printf("Added %s %s", strings.ToLower(typeName), o)
 			conf.items = append(conf.items, o)
-		} 
+		}
 	}
 	return err.ErrorOrNil()
 }

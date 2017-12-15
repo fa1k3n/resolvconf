@@ -322,6 +322,9 @@ func Example() {
 		log.Fatal(err)
 	}
 	conf, err := resolvconf.ReadConf(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
 	res.Body.Close()
 	conf.Remove(resolvconf.NewNameserver(net.ParseIP("8.8.4.4")))
 	conf.Add(resolvconf.NewDomain("foo.bar"), resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask(net.ParseIP("255.255.240.0")))

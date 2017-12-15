@@ -16,17 +16,20 @@ import (
 	"fmt"
 	"os"
 	"bytes"
-	"github.com/fa1k3n/resolvconf"
+	"github.com/Fa1k3n/resolvconf"
 )
 
 func main() {
 	conf := resolvconf.New()
 	
 	// Add some options
-	conf.Add(resolvconf.Option("debug"), resolvconf.Option("ndots", 3))
+	conf.Add(resolvconf.NewOption("debug"), resolvconf.NewOption("ndots").Set(3))
 
 	// Add a nameservers
-	conf.Add(resolvconf.Nameserver(net.ParseIP("8.8.8.8")))
+	conf.Add(resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+
+	// Add a sortlist
+	conf.Add(resolvconf.NewSortItem(net.ParseIP("130.155.160.0")).SetNetmask("255.255.240.0"))
 
 	// Dump to stdout
 	conf.Write(os.Stdout)

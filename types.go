@@ -37,7 +37,7 @@ func (conf *Conf) Sortlist() []SortItem {
 
 // Domain returns current domain
 func (conf *Conf) Domain() Domain {
-	for _, item := range conf.items {	
+	for _, item := range conf.items {
 		if d, ok := item.(*Domain); ok {
 			return *d
 		}
@@ -60,21 +60,24 @@ func (conf *Conf) Search() []SearchDomain {
 func (conf *Conf) Options() []Option {
 	var ret []Option
 	for _, item := range conf.items {
-		if _, ok := item.(*Option); ok {			
+		if _, ok := item.(*Option); ok {
 			ret = append(ret, *item.(*Option))
 		}
 	}
 	return ret
 }
 
+// ConfItem is the generic interface all items in a resolv.conf file
+// must implement.
 type ConfItem interface {
 	fmt.Stringer
 	applyLimits(conf *Conf) (bool, error)
 	Equal(b ConfItem) bool
 }
 
+// Nameserver is the nameserver type 
 type Nameserver struct {
-	IP net.IP
+	IP net.IP // IP address
 }
 
 func (ns Nameserver) applyLimits(conf *Conf) (bool, error) {
@@ -90,6 +93,7 @@ func (ns Nameserver) applyLimits(conf *Conf) (bool, error) {
 	return true, nil
 }
 
+// Equal compares to nameservers with eachother, returns true if equal
 func (ns Nameserver) Equal(b ConfItem) bool {
 	if item, ok := b.(*Nameserver); ok {
 		return ns.IP.Equal(item.IP)
@@ -101,6 +105,7 @@ func (ns Nameserver) String() string {
 	return ns.IP.String()
 }
 
+// Domain is the single domain in a resolv.conf file
 type Domain struct {
 	Name string
 }
@@ -122,6 +127,7 @@ func (dom Domain) String() string {
 	return dom.Name
 }
 
+// Equal compares two domains with each other, returns true if equal
 func (dom Domain) Equal(b ConfItem) bool {
 	if item, ok := b.(*Domain); ok {
 		return dom.Name == item.Name
@@ -129,6 +135,7 @@ func (dom Domain) Equal(b ConfItem) bool {
 	return false
 }
 
+// SearchDomain is one of the items in the search list
 type SearchDomain struct {
 	Name string
 }
@@ -145,6 +152,7 @@ func (sd SearchDomain) String() string {
 	return sd.Name
 }
 
+// Equal compares two search domains with each other, returns true if equal
 func (sd SearchDomain) Equal(b ConfItem) bool {
 	if item, ok := b.(*SearchDomain); ok {
 		return sd.Name == item.Name
@@ -152,6 +160,8 @@ func (sd SearchDomain) Equal(b ConfItem) bool {
 	return false
 }
 
+// SortItem is one of the items in the sort list, it must have an address and
+// may have an netmask
 type SortItem struct {
 	Address net.IP
 	Netmask net.IP
@@ -167,6 +177,7 @@ func (item SortItem) applyLimits(conf *Conf) (bool, error) {
 	return true, nil
 }
 
+// Equal compares two SortItems, return true if equal
 func (slp SortItem) Equal(b ConfItem) bool {
 	if item, ok := b.(*SortItem); ok {
 		return slp.Address.String() == item.Address.String()
@@ -175,11 +186,13 @@ func (slp SortItem) Equal(b ConfItem) bool {
 	return false
 }
 
+// SetNetmask sets the netmask for an SortItem
 func (slp *SortItem) SetNetmask(nm net.IP) *SortItem {
 	slp.Netmask = nm
 	return slp
 }
 
+// GetNetmask returns netmask from an SortItems
 func (slp SortItem) GetNetmask() net.IP {
 	return slp.Netmask
 }
@@ -191,6 +204,8 @@ func (s SortItem) String() string {
 	return fmt.Sprintf("%s", s.Address)
 }
 
+// Option represents an option item which must have a Type 
+// and some options must have a value
 type Option struct {
 	Type  string
 	Value int
@@ -209,6 +224,7 @@ func (opt Option) applyLimits(conf *Conf) (bool, error) {
 	return true, nil
 }
 
+// Equal compares two Option, return true if equal
 func (opt Option) Equal(b ConfItem) bool {
 	if o, ok := b.(*Option); ok {
 		return opt.Type == o.Type
@@ -216,6 +232,7 @@ func (opt Option) Equal(b ConfItem) bool {
 	return false
 }
 
+// Set sets the value of an option
 func (opt *Option) Set(value int) *Option {
 	if value < 0 {
 		return opt
@@ -224,19 +241,20 @@ func (opt *Option) Set(value int) *Option {
 	return opt
 }
 
+// Get returns the option value
 func (opt Option) Get() int {
 	return opt.Value
 }
 
 func (o Option) String() string {
-	switch (o.Type) {
+	switch o.Type {
 	case "debug", "rotate", "no-check-names", "inet6",
 		"ip6-bytestring", "ip6-dotint", "no-ip6-dotint",
 		"edns0", "single-request", "single-request-reopen",
 		"no-tld-query", "use-vc":
-			return fmt.Sprintf("%s", o.Type)
+		return fmt.Sprintf("%s", o.Type)
 	case "ndots", "timeout", "attempts":
-			return fmt.Sprintf("%s:%d", o.Type, o.Value)
+		return fmt.Sprintf("%s:%d", o.Type, o.Value)
 	}
 	return ""
 }
