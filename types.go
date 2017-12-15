@@ -75,7 +75,7 @@ type ConfItem interface {
 	Equal(b ConfItem) bool
 }
 
-// Nameserver is the nameserver type 
+// Nameserver is the nameserver type
 type Nameserver struct {
 	IP net.IP // IP address
 }
@@ -167,9 +167,9 @@ type SortItem struct {
 	Netmask net.IP
 }
 
-func (item SortItem) applyLimits(conf *Conf) (bool, error) {
-	if i := conf.Find(item); i != nil {
-		return false, fmt.Errorf("Sortlist pair %s already exists in conf", item)
+func (si SortItem) applyLimits(conf *Conf) (bool, error) {
+	if i := conf.Find(si); i != nil {
+		return false, fmt.Errorf("Sortlist pair %s already exists in conf", si)
 	}
 	if len(conf.Sortlist()) == 10 {
 		return false, fmt.Errorf("Too long sortlist, 10 is maximum")
@@ -178,33 +178,33 @@ func (item SortItem) applyLimits(conf *Conf) (bool, error) {
 }
 
 // Equal compares two SortItems, return true if equal
-func (slp SortItem) Equal(b ConfItem) bool {
+func (si SortItem) Equal(b ConfItem) bool {
 	if item, ok := b.(*SortItem); ok {
-		return slp.Address.String() == item.Address.String()
+		return si.Address.String() == item.Address.String()
 	}
 
 	return false
 }
 
 // SetNetmask sets the netmask for an SortItem
-func (slp *SortItem) SetNetmask(nm net.IP) *SortItem {
-	slp.Netmask = nm
-	return slp
+func (si *SortItem) SetNetmask(nm net.IP) *SortItem {
+	si.Netmask = nm
+	return si
 }
 
 // GetNetmask returns netmask from an SortItems
-func (slp SortItem) GetNetmask() net.IP {
-	return slp.Netmask
+func (si SortItem) GetNetmask() net.IP {
+	return si.Netmask
 }
 
-func (s SortItem) String() string {
-	if len(s.Netmask) > 0 {
-		return fmt.Sprintf("%s/%s", s.Address, s.Netmask)
+func (si SortItem) String() string {
+	if len(si.Netmask) > 0 {
+		return fmt.Sprintf("%s/%s", si.Address, si.Netmask)
 	}
-	return fmt.Sprintf("%s", s.Address)
+	return fmt.Sprintf("%s", si.Address)
 }
 
-// Option represents an option item which must have a Type 
+// Option represents an option item which must have a Type
 // and some options must have a value
 type Option struct {
 	Type  string
@@ -246,15 +246,15 @@ func (opt Option) Get() int {
 	return opt.Value
 }
 
-func (o Option) String() string {
-	switch o.Type {
+func (opt Option) String() string {
+	switch opt.Type {
 	case "debug", "rotate", "no-check-names", "inet6",
 		"ip6-bytestring", "ip6-dotint", "no-ip6-dotint",
 		"edns0", "single-request", "single-request-reopen",
 		"no-tld-query", "use-vc":
-		return fmt.Sprintf("%s", o.Type)
+		return fmt.Sprintf("%s", opt.Type)
 	case "ndots", "timeout", "attempts":
-		return fmt.Sprintf("%s:%d", o.Type, o.Value)
+		return fmt.Sprintf("%s:%d", opt.Type, opt.Value)
 	}
 	return ""
 }
@@ -266,24 +266,24 @@ func New() *Conf {
 	return c
 }
 
-// Nameserver creates a new Nameserver item
+// NewNameserver creates a new Nameserver item
 func NewNameserver(IP net.IP) *Nameserver {
 	return &Nameserver{IP}
 }
 
-// Domain creates a new domain that will be used
+// NewDomain creates a new domain that will be used
 // as value for the 'domain' option in the generated file
 func NewDomain(dom string) *Domain {
 	return &Domain{dom}
 }
 
-// SearchDomain creates a new search domain that will be added
+// NewSearchDomain creates a new search domain that will be added
 // to the 'search' list in the generated file
 func NewSearchDomain(dom string) *SearchDomain {
 	return &SearchDomain{dom}
 }
 
-// SortItem creates a new sortlist that will be added to the
+// NewSortItem creates a new sortlist that will be added to the
 // 'sort' item in the resolv.conf file.
 // If mask is given the output will be IP/mask e.g.
 // 8.8.8.8/255.255.255.0 otherwise output will be
@@ -294,7 +294,7 @@ func NewSortItem(addr net.IP) *SortItem {
 	return slp
 }
 
-// Option creates a new option, val must be a positive number if used.
+// NewOption creates a new option, val must be a positive number if used.
 // Witout val the option will be interpreted as a bolean e.g.
 // debug , with a val the option will be interpreted as an
 // setvalue, e.g. ndots:5
