@@ -63,7 +63,7 @@ func TestOptionsGeneration(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, str, "options debug")
 
-	conf.Remove(*dbg)
+	conf.Remove(dbg)
 	str, err = GetConf(conf)
 	assert.Nil(t, err)
 	assert.Equal(t, "", str)
@@ -76,7 +76,7 @@ func TestOptionsGeneration(t *testing.T) {
 
 	ndots := resolvconf.NewOption("ndots").Set(3)
 	conf.Add(ndots)
-	conf.Remove(*dbg)
+	conf.Remove(dbg)
 	str, err = GetConf(conf)
 	assert.Nil(t, err)
 	assert.Contains(t, str, "options rotate ndots:3")

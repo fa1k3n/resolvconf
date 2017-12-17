@@ -162,7 +162,7 @@ func TestBasicOptions(t *testing.T) {
 	conf, err = resolvconf.ReadConf(strings.NewReader("options debug rotate"))
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(conf.GetOptions()))
-	assert.NotNil(t, conf.Find(*resolvconf.NewOption("rotate")))
+	assert.NotNil(t, conf.Find(resolvconf.NewOption("rotate")))
 
 	conf, err = resolvconf.ReadConf(strings.NewReader("options debug rotate ndots:12"))
 	assert.Nil(t, err)

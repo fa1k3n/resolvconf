@@ -230,7 +230,7 @@ func TestRemoveMultipleItems(t *testing.T) {
 	assert.NotNil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))))
 	assert.Equal(t, 1, len(conf.GetOptions()))
 
-	err = conf.Remove(*resolvconf.NewOption("ndots").Set(4), resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
+	err = conf.Remove(resolvconf.NewOption("ndots").Set(4), resolvconf.NewNameserver(net.ParseIP("8.8.8.8")))
 	assert.Nil(t, err)
 	assert.Nil(t, conf.Find(resolvconf.NewNameserver(net.ParseIP("8.8.8.8"))))
 	assert.Equal(t, 0, len(conf.GetOptions()))
@@ -355,7 +355,7 @@ func TestLogging(t *testing.T) {
 	buf.Reset()
 	conf.Add(resolvconf.NewOption("debug"))
 	assert.Contains(t, buf.String(), "Added option debug")
-	conf.Remove(*resolvconf.NewOption("debug"))
+	conf.Remove(resolvconf.NewOption("debug"))
 	assert.Contains(t, buf.String(), "Removed option debug")
 }
 
@@ -402,6 +402,26 @@ func TestFindNilElements(t *testing.T) {
 		}
 	}()
 	conf.Find(nil)
+}
+
+func TestOptionsCanBeCapped(t *testing.T) {
+	conf := resolvconf.New()
+	buf := new(bytes.Buffer)
+	conf.EnableLogging(buf)
+
+	conf.Add(resolvconf.NewOption("ndots").Set(16),
+		resolvconf.NewOption("timeout").Set(31),
+		resolvconf.NewOption("attempts").Set(6))
+	ndots := conf.Find(resolvconf.NewOption("ndots"))
+	timeout := conf.Find(resolvconf.NewOption("timeout"))
+	attempts := conf.Find(resolvconf.NewOption("attempts"))
+	assert.Equal(t, 15, ndots.(*resolvconf.Option).Get())
+	assert.Equal(t, 30, timeout.(*resolvconf.Option).Get())
+	assert.Equal(t, 5, attempts.(*resolvconf.Option).Get())
+
+	assert.Contains(t, buf.String(), fmt.Sprintf("[WARN] Option ndots is capped to 15, set value is 16"))
+	assert.Contains(t, buf.String(), fmt.Sprintf("[WARN] Option timeout is capped to 30, set value is 31"))
+	assert.Contains(t, buf.String(), fmt.Sprintf("[WARN] Option attempts is capped to 5, set value is 6"))
 }
 
 func ExampleConf_Add() {

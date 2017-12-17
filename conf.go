@@ -11,6 +11,9 @@ const (
 	searchDomainMaxCharCount = 256 // Maximum total number of chars in search domains
 	nameserversMaxCount      = 3   // Maximum number of nameservers
 	sortListMaxCount         = 10  // Maximum number of items in sortlist
+	optionNdotsMax           = 15  // Maximum ndots value, silently capped
+	optionTimeoutMax         = 30  // Maximum timeout value, silently capped
+	optionAttemptsMax        = 5   // Maximum attempts value, silently capped
 )
 
 // Conf represents a configuration object

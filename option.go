@@ -28,12 +28,32 @@ func NewOption(t string) *Option {
 	return opt
 }
 
-func (opt Option) applyLimits(conf *Conf) (bool, error) {
+func (opt *Option) applyLimits(conf *Conf) (bool, error) {
 	if opt.Type == "ndots" && opt.Value < 0 {
 		return false, fmt.Errorf("Bad value %d", opt.Value)
 	}
 	if _, e := parseOption(opt.String()); e != nil {
 		return false, fmt.Errorf("Unknown option %s", opt)
+	}
+	// Check limits
+	newVal := -1
+	switch opt.Type {
+	case "ndots":
+		if opt.Value > optionNdotsMax {
+			newVal = optionNdotsMax
+		}
+	case "timeout":
+		if opt.Value > optionTimeoutMax {
+			newVal = optionTimeoutMax
+		}
+	case "attempts":
+		if opt.Value > optionAttemptsMax {
+			newVal = optionAttemptsMax
+		}
+	}
+	if newVal > -1 {
+		conf.logger.Printf("[WARN] Option %s is capped to %d, set value is %d", opt.Type, newVal, opt.Value)
+		opt.Value = newVal
 	}
 	if o := conf.Find(opt); o != nil {
 		// If option has a value then update otherwise error
